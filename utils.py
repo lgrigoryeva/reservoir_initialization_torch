@@ -13,10 +13,11 @@ import scipy.integrate as sp
 
 config = {}
 config["EXAMPLE"] = 'brusselator'
+# config["EXAMPLE"] = 'lorenz'
 config["PATH"] = "data/"
 
 config["DATA"] = {}
-config["DATA"]["n_train"] = 1
+config["DATA"]["n_train"] = 5
 config["DATA"]["n_val"] = 1
 config["DATA"]["n_test"] = 1
 config["DATA"]["l_trajectories"] = 2000
@@ -31,7 +32,7 @@ config["DATA"]["gh_lenght_chunks"] = 5
 
 config["MODEL"] = {}
 config["MODEL"]["input_size"] = 3
-config["MODEL"]["reservoir_size"] = 100
+config["MODEL"]["reservoir_size"] = 200
 
 config["TRAINING"] = {}
 config["TRAINING"]["epochs"] = 500
@@ -303,8 +304,8 @@ class ESNModel():
                 #                          torch.matmul(torch.transpose(out[0], 0, 1), out[0]) +
                 #                          torch.tensor(1e-4).to(self.device)*torch.eye(
                 #                              out[0].shape[1], out[0].shape[1]).to(self.device)))
-                ytmp = torch.transpose(y[0].to('cpu'), 0, 1)
-                outtmp = torch.transpose(out[0], 0, 1).to('cpu')
+                ytmp = torch.transpose(y.view(-1, self.net.input_size).to('cpu'), 0, 1)
+                outtmp = torch.transpose(out.view(-1, out.shape[-1]), 0, 1).to('cpu')
                 print(torch.eye(outtmp.shape[0], outtmp.shape[0]).shape)
                 ridge = torch.matmul(torch.matmul(ytmp,
                                                   torch.transpose(outtmp, 0, 1)),
@@ -312,6 +313,15 @@ class ESNModel():
                                          torch.matmul(outtmp, torch.transpose(outtmp, 0, 1)) +
                                          torch.tensor(5e-6).to('cpu')*torch.eye(
                                              outtmp.shape[0], outtmp.shape[0]).to('cpu')))
+                # ytmp = torch.transpose(y[0].to('cpu'), 0, 1)
+                # outtmp = torch.transpose(out[0], 0, 1).to('cpu')
+                # print(torch.eye(outtmp.shape[0], outtmp.shape[0]).shape)
+                # ridge = torch.matmul(torch.matmul(ytmp,
+                #                                   torch.transpose(outtmp, 0, 1)),
+                #                      torch.inverse(
+                #                          torch.matmul(outtmp, torch.transpose(outtmp, 0, 1)) +
+                #                          torch.tensor(5e-6).to('cpu')*torch.eye(
+                #                              outtmp.shape[0], outtmp.shape[0]).to('cpu')))
                 # ridge = torch.matmul(torch.matmul(y[0].to(self.device),
                 #                                   torch.transpose(out[0], 0, 1)),
                 #                      torch.inverse(

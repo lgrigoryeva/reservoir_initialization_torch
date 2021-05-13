@@ -13,13 +13,18 @@ torch.set_default_dtype(config["TRAINING"]['dtype'])
 
 def main():
     if config["EXAMPLE"] == 'brusselator':
-        config["DATA"]["n_train"] = 256
+        config["DATA"]["n_train"] = 50
         config["DATA"]["n_val"] = 5
         config["DATA"]["n_test"] = 5
-        config["DATA"]["l_trajectories"] = 200
-        config["TRAINING"]["ridge"] = False
-        config["TRAINING"]["learning_rate"] = 5e-2
-        config["TRAINING"]["epochs"] = 1000
+        config["DATA"]["l_trajectories"] = 500
+        # config["DATA"]["n_train"] = 100
+        # config["DATA"]["n_val"] = 50
+        # config["DATA"]["n_test"] = 50
+        # config["DATA"]["l_trajectories"] = 400
+        # config["TRAINING"]["batch_size"] = config["DATA"]["n_train"]
+        # config["TRAINING"]["ridge"] = False
+        # config["TRAINING"]["learning_rate"] = 5e-2
+        # config["TRAINING"]["epochs"] = 1000
         dataset_train = BrusselatorDataset(config["DATA"]["n_train"],
                                       config["DATA"]["l_trajectories"], verbose=True)
         dataset_val = BrusselatorDataset(config["DATA"]["n_val"],
