@@ -6,18 +6,33 @@ from torch.utils.data import DataLoader
 
 from tqdm.auto import tqdm
 
-from utils import config, LorenzDataset, ESN, ESNModel, progress
+from utils import config, BrusselatorDataset, LorenzDataset, ESN, ESNModel, progress
 
 torch.set_default_dtype(config["TRAINING"]['dtype'])
 
 
 def main():
-    dataset_train = LorenzDataset(config["DATA"]["n_train"],
-                                  config["DATA"]["l_trajectories"],
-                                  config["MODEL"]["input_size"], verbose=True)
-    dataset_val = LorenzDataset(config["DATA"]["n_val"],
-                                config["DATA"]["l_trajectories"],
-                                config["MODEL"]["input_size"], verbose=False)
+    if config["EXAMPLE"] == 'brusselator':
+        config["DATA"]["n_train"] = 256
+        config["DATA"]["n_val"] = 5
+        config["DATA"]["n_test"] = 5
+        config["DATA"]["l_trajectories"] = 200
+        config["TRAINING"]["ridge"] = False
+        config["TRAINING"]["learning_rate"] = 5e-2
+        config["TRAINING"]["epochs"] = 1000
+        dataset_train = BrusselatorDataset(config["DATA"]["n_train"],
+                                      config["DATA"]["l_trajectories"], verbose=True)
+        dataset_val = BrusselatorDataset(config["DATA"]["n_val"],
+                                    config["DATA"]["l_trajectories"], verbose=False)
+        config["MODEL"]["input_size"] = 1
+    else:
+        dataset_train = LorenzDataset(config["DATA"]["n_train"],
+                                      config["DATA"]["l_trajectories"],
+                                      config["MODEL"]["input_size"], verbose=True)
+        dataset_val = LorenzDataset(config["DATA"]["n_val"],
+                                    config["DATA"]["l_trajectories"],
+                                    config["MODEL"]["input_size"], verbose=False)
+
     # Create PyTorch dataloaders for train and validation data
     dataloader_train = DataLoader(dataset_train, batch_size=config["TRAINING"]["batch_size"],
                                   shuffle=True, num_workers=8, pin_memory=True)
@@ -61,7 +76,7 @@ def main():
     plt.savefig('fig/loss.pdf')
     plt.show()
 
-    warmup = 200
+    warmup = int(config["DATA"]["l_trajectories"]/4)
     predictions, _ = model.integrate(torch.tensor(
         dataset_val.x[0][:warmup], dtype=torch.get_default_dtype()),
         T=dataset_val.x[0].shape[0]-warmup-1)
@@ -69,7 +84,10 @@ def main():
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot(dataset_val.tt[:-1], dataset_val.x[0][:, 0])
-    ax.plot(dataset_val.tt[:-1], predictions[:, 0])
+    if len(predictions.shape)>1:
+        ax.plot(dataset_val.tt[:-1], predictions[:, 0])
+    else:
+        ax.plot(dataset_val.tt[:-1], predictions)
     ax.axvline(x=dataset_val.tt[warmup], color='k')
     ax.set_xlabel('$t$')
     ax.set_ylabel('$x$')

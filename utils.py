@@ -9,7 +9,10 @@ from tqdm.auto import tqdm
 
 from int.lorenz import integrate
 
+import scipy.integrate as sp
+
 config = {}
+config["EXAMPLE"] = 'brusselator'
 config["PATH"] = "data/"
 
 config["DATA"] = {}
@@ -28,7 +31,7 @@ config["DATA"]["gh_lenght_chunks"] = 5
 
 config["MODEL"] = {}
 config["MODEL"]["input_size"] = 3
-config["MODEL"]["reservoir_size"] = 250
+config["MODEL"]["reservoir_size"] = 100
 
 config["TRAINING"] = {}
 config["TRAINING"]["epochs"] = 500
@@ -59,7 +62,7 @@ class LorenzDataset(torch.utils.data.Dataset):
             ax.set_xlabel(r'$x$')
             ax.set_ylabel(r'$y$')
             ax.set_zlabel(r'$z$')
-            plt.savefig('fig/trajectory.pdf')
+            plt.savefig('fig/lorenz_trajectory.pdf')
             plt.show()
 
     def __len__(self):
@@ -70,6 +73,68 @@ class LorenzDataset(torch.utils.data.Dataset):
         y = self.y[self.ids[index]]
         return torch.tensor(x, dtype=torch.get_default_dtype()), \
             torch.tensor(y, dtype=torch.get_default_dtype())
+
+def f_brusselator(t, y, arg_a, arg_b):
+    """Temporal evolution of the Brusselator."""
+    dx_dt = arg_a + np.real(y)**2*np.imag(y) - (arg_b+1)*np.real(y)
+    dy_dt = arg_b*np.real(y) - np.real(y)**2*np.imag(y)
+    return dx_dt+1.0j*dy_dt
+
+
+def integrate_brusselator(initial_condition, l_trajectories, tmin=0,
+                          delta_t=1e-3, parameters={'a': 1.0, 'b': 2.1}):
+    """Integrate Brusselator using initial condition y0."""
+    initial_time = 0.0
+    tmax = l_trajectories/5
+    tt_arr = np.linspace(tmin, tmax, l_trajectories+1)
+    data = []
+    runner = sp.ode(f_brusselator).set_integrator('zvode', method='Adams')
+    runner.set_initial_value(initial_condition, initial_time).set_f_params(parameters['a'],
+                                                                           parameters['b'])
+    data.append(runner.y)
+
+    i = 0
+    while runner.successful() and np.abs(runner.t) < np.abs(tmax):
+        i = i + 1
+        runner.integrate(runner.t + delta_t)
+        if (i % int(float(tmax) / float(l_trajectories*delta_t)) == 0):
+            data.append(runner.y)
+    return tt_arr, np.array(data, dtype='complex')
+
+
+class BrusselatorDataset(torch.utils.data.Dataset):
+    """Dataset of transients obtained from a Brusselator."""
+
+    def __init__(self, n_train, l_trajectories, verbose=False):
+        self.ids = np.arange(n_train)
+
+        self.x = []
+        self.y = []
+        self.y_data = []
+        for i in tqdm(range(n_train), leave=True, position=0):
+            y0 = 2.0*np.random.random() + 1.0j*3.0*np.random.random()
+            tt_arr, trajectory = integrate_brusselator(y0, l_trajectories)
+            self.x.append(trajectory[:-1].real)
+            self.y.append(trajectory[1:].real)
+            self.y_data.append(trajectory[:-1].imag)
+        self.tt = tt_arr
+        if verbose:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(trajectory[:-1].real, trajectory[:-1].imag)
+            ax.set_xlabel(r'$u$')
+            ax.set_ylabel(r'$v$')
+            plt.savefig('fig/brusselator_trajectory.pdf')
+            plt.show()
+
+    def __len__(self):
+        return len(self.ids)
+
+    def __getitem__(self, index):
+        x = self.x[self.ids[index]]
+        y = self.y[self.ids[index]]
+        return torch.tensor(x, dtype=torch.get_default_dtype()), torch.tensor(y, dtype=torch.get_default_dtype())
+
 
 
 class ESN(nn.Module):
@@ -245,7 +310,7 @@ class ESNModel():
                                                   torch.transpose(outtmp, 0, 1)),
                                      torch.inverse(
                                          torch.matmul(outtmp, torch.transpose(outtmp, 0, 1)) +
-                                         torch.tensor(1e-4).to('cpu')*torch.eye(
+                                         torch.tensor(5e-6).to('cpu')*torch.eye(
                                              outtmp.shape[0], outtmp.shape[0]).to('cpu')))
                 # ridge = torch.matmul(torch.matmul(y[0].to(self.device),
                 #                                   torch.transpose(out[0], 0, 1)),
