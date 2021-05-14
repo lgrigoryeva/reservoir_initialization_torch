@@ -9,7 +9,16 @@ from tqdm.auto import tqdm
 
 from int.lorenz import integrate
 
+import dm as diffusion_maps
+
 import scipy.integrate as sp
+from scipy.spatial.distance import pdist
+
+torch.manual_seed(42)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(42)
+    torch.backends.cudnn.deterministic = True
+
 
 config = {}
 config["EXAMPLE"] = 'brusselator'
@@ -23,8 +32,8 @@ config["DATA"]["n_test"] = 1
 config["DATA"]["l_trajectories"] = 2000
 config["DATA"]["l_trajectories_test"] = 500
 config["DATA"]["lenght_chunks"] = 10
-config["DATA"]["shift_betw_chunks"] = 1
-config["DATA"]["initial_set_off"] = 10
+config["DATA"]["shift_betw_chunks"] = 4
+config["DATA"]["initial_set_off"] = 20
 config["DATA"]["max_n_transients"] = 200
 config["DATA"]["max_warmup"] = 50
 config["DATA"]["integration_steps"] = 250
@@ -32,14 +41,23 @@ config["DATA"]["gh_lenght_chunks"] = 5
 
 config["MODEL"] = {}
 config["MODEL"]["input_size"] = 3
-config["MODEL"]["reservoir_size"] = 200
+config["MODEL"]["reservoir_size"] = 2000
+config["MODEL"]["scale_rec"] = 0.9
+config["MODEL"]["scale_in"] = 0.02
+config["MODEL"]["quadratic"] = False
 
 config["TRAINING"] = {}
 config["TRAINING"]["epochs"] = 500
-config["TRAINING"]["batch_size"] = 128
+config["TRAINING"]["batch_size"] = 400
 config["TRAINING"]["learning_rate"] = 5e-1
 config["TRAINING"]["ridge"] = True
 config["TRAINING"]['dtype'] = torch.float64
+config["TRAINING"]["gh_num_eigenpairs"] = 100
+
+config["PLOTS"] = {}
+config["PLOTS"]["textwidth_pts"] = 505
+config["PLOTS"]["textwidth_inch"] = config["PLOTS"]["textwidth_pts"]/72.27
+
 
 
 class LorenzDataset(torch.utils.data.Dataset):
@@ -136,6 +154,39 @@ class BrusselatorDataset(torch.utils.data.Dataset):
         y = self.y[self.ids[index]]
         return torch.tensor(x, dtype=torch.get_default_dtype()), torch.tensor(y, dtype=torch.get_default_dtype())
 
+    def save_data(self, path, filename):
+        np.savez(path+filename, x=self.x, y=self.y, y_data=self.y_data, tt=self.tt, ids=self.ids)
+
+
+
+class LoadBrusselatorDataset(torch.utils.data.Dataset):
+    """Dataset of transients obtained from a Brusselator."""
+
+    def __init__(self, path, filename, verbose=False):
+        data = np.load(path+filename)
+        self.ids = data["ids"]
+        self.x = data["x"]
+        self.y = data["y"]
+        self.y_data = data["y_data"]
+        self.tt = data["tt"]
+        if verbose:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(self.x[0], self.y_data[0])
+            ax.set_xlabel(r'$u$')
+            ax.set_ylabel(r'$v$')
+            plt.savefig('fig/brusselator_trajectory.pdf')
+            plt.show()
+
+    def __len__(self):
+        return len(self.ids)
+
+    def __getitem__(self, index):
+        x = self.x[self.ids[index]]
+        y = self.y[self.ids[index]]
+        return torch.tensor(x, dtype=torch.get_default_dtype()), torch.tensor(y, dtype=torch.get_default_dtype())
+
+
 
 
 class ESN(nn.Module):
@@ -147,7 +198,6 @@ class ESN(nn.Module):
                  output_size: int,
                  scale_rec: float = 1/1.1,
                  scale_in: float = 1.0/40.,
-                 density_in: float = 1.0,
                  leaking_rate: float = 1.0,
                  rec_rescaling_method: str = 'specrad',  # Either "norm" or "specrad"
                  quadratic: bool = True
@@ -311,7 +361,7 @@ class ESNModel():
                                                   torch.transpose(outtmp, 0, 1)),
                                      torch.inverse(
                                          torch.matmul(outtmp, torch.transpose(outtmp, 0, 1)) +
-                                         torch.tensor(5e-6).to('cpu')*torch.eye(
+                                         torch.tensor(1e-6).to('cpu')*torch.eye(
                                              outtmp.shape[0], outtmp.shape[0]).to('cpu')))
                 # ytmp = torch.transpose(y[0].to('cpu'), 0, 1)
                 # outtmp = torch.transpose(out[0], 0, 1).to('cpu')
@@ -412,3 +462,41 @@ def progress(train_loss, val_loss):
     """Define progress bar description."""
     return "Train/Loss: {:.6f}  Val/Loss: {:.6f}".format(
         train_loss, val_loss)
+
+def nystrom(Xnew, EigVec, Data, EigenVal, eps):
+    epsq = (eps)*2
+    [Nsamp, dsmall] = EigVec.shape
+    phi = np.zeros((dsmall, 1))
+    dist = cdist(Xnew, Data, metric='sqeuclidean')
+    dist = np.array(dist)
+    w = np.exp((-dist)/epsq)
+    Wtotal = np.sum(w)
+    for j in range(0, dsmall):
+        phi[j] = (np.sum((w[0, :]/(Wtotal)*EigVec[:, j])))*(1/EigenVal[j])
+    return (phi)
+
+def create_chunks(data, max_n_transients, length_chunks, shift_betw_chunks):
+    chunks = []
+    for i in range(int(min(len(data), max_n_transients))):
+        for j in range(int((len(data[i])-length_chunks)/shift_betw_chunks)+1):
+            chunks.append(data[i][int(j*shift_betw_chunks):int(j*shift_betw_chunks+length_chunks)])
+    chunks = np.squeeze(np.array(chunks))
+    return chunks
+
+def dmaps(data, eps=None, return_eps=False):
+    """Do diffusion maps on data."""
+    pw_dists = pdist(data, "euclidean")
+    if eps is None:
+        eps = np.median(pw_dists**2)  # scale parameter
+    dmap = diffusion_maps.SparseDiffusionMaps(points=data,
+                                              epsilon=eps,
+                                              num_eigenpairs=12,
+                                              cut_off=np.inf,
+                                              renormalization=0,
+                                              normalize_kernel=True,
+                                              use_cuda=False)
+    V = dmap.eigenvectors.T
+    D = dmap.eigenvalues.T
+    if return_eps:
+        return D, V, eps
+    return D, V

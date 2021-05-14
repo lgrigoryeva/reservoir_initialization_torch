@@ -6,29 +6,17 @@ from torch.utils.data import DataLoader
 
 from tqdm.auto import tqdm
 
-from utils import config, BrusselatorDataset, LorenzDataset, ESN, ESNModel, progress
+from utils import config, LoadBrusselatorDataset, LorenzDataset, ESN, ESNModel, progress
 
 torch.set_default_dtype(config["TRAINING"]['dtype'])
 
 
 def main():
     if config["EXAMPLE"] == 'brusselator':
-        config["DATA"]["n_train"] = 50
-        config["DATA"]["n_val"] = 5
-        config["DATA"]["n_test"] = 5
-        config["DATA"]["l_trajectories"] = 500
-        # config["DATA"]["n_train"] = 100
-        # config["DATA"]["n_val"] = 50
-        # config["DATA"]["n_test"] = 50
-        # config["DATA"]["l_trajectories"] = 400
-        # config["TRAINING"]["batch_size"] = config["DATA"]["n_train"]
-        # config["TRAINING"]["ridge"] = False
-        # config["TRAINING"]["learning_rate"] = 5e-2
-        # config["TRAINING"]["epochs"] = 1000
-        dataset_train = BrusselatorDataset(config["DATA"]["n_train"],
-                                      config["DATA"]["l_trajectories"], verbose=True)
-        dataset_val = BrusselatorDataset(config["DATA"]["n_val"],
-                                    config["DATA"]["l_trajectories"], verbose=False)
+        dataset_train = LoadBrusselatorDataset(path=config["PATH"], filename='training_data.npz',
+                                               verbose=True)
+        dataset_val = LoadBrusselatorDataset(path=config["PATH"], filename='validation_data.npz')
+        dataset_test = LoadBrusselatorDataset(path=config["PATH"], filename='test_data.npz')
         config["MODEL"]["input_size"] = 1
     else:
         dataset_train = LorenzDataset(config["DATA"]["n_train"],
@@ -37,6 +25,9 @@ def main():
         dataset_val = LorenzDataset(config["DATA"]["n_val"],
                                     config["DATA"]["l_trajectories"],
                                     config["MODEL"]["input_size"], verbose=False)
+        dataset_test = LorenzDataset(config["DATA"]["n_val"],
+                                     config["DATA"]["l_trajectories"],
+                                     config["MODEL"]["input_size"], verbose=False)
 
     # Create PyTorch dataloaders for train and validation data
     dataloader_train = DataLoader(dataset_train, batch_size=config["TRAINING"]["batch_size"],
@@ -48,7 +39,9 @@ def main():
 
     # Create the network architecture
     network = ESN(config["MODEL"]["input_size"], config["MODEL"]["reservoir_size"],
-                  config["MODEL"]["input_size"])
+                  config["MODEL"]["input_size"], config["MODEL"]["scale_rec"],
+                  config["MODEL"]["scale_in"],
+                  quadratic = config["MODEL"]["quadratic"])
     print(network)
 
     # Create model wrapper around architecture
@@ -81,19 +74,19 @@ def main():
     plt.savefig('fig/loss.pdf')
     plt.show()
 
-    warmup = int(config["DATA"]["l_trajectories"]/4)
+    warmup = config["DATA"]["max_warmup"]
     predictions, _ = model.integrate(torch.tensor(
-        dataset_val.x[0][:warmup], dtype=torch.get_default_dtype()),
-        T=dataset_val.x[0].shape[0]-warmup-1)
+        dataset_test.x[0][:warmup], dtype=torch.get_default_dtype()),
+        T=dataset_test.x[0].shape[0]-warmup-1)
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.plot(dataset_val.tt[:-1], dataset_val.x[0][:, 0])
+    ax.plot(dataset_test.tt[:-1], dataset_test.x[0][:, 0])
     if len(predictions.shape)>1:
-        ax.plot(dataset_val.tt[:-1], predictions[:, 0])
+        ax.plot(dataset_test.tt[:-1], predictions[:, 0])
     else:
-        ax.plot(dataset_val.tt[:-1], predictions)
-    ax.axvline(x=dataset_val.tt[warmup], color='k')
+        ax.plot(dataset_test.tt[:-1], predictions)
+    ax.axvline(x=dataset_test.tt[warmup], color='k')
     ax.set_xlabel('$t$')
     ax.set_ylabel('$x$')
     plt.savefig('fig/predictions.pdf')
