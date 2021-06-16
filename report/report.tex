@@ -1,0 +1,134 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{lipsum}
+\usepackage{amsmath}
+\usepackage{amsbsy}
+
+\makeatletter
+\renewcommand*\env@matrix[1][\arraystretch]{%
+  \edef\arraystretch{#1}%
+  \hskip -\arraycolsep
+  \let\@ifnextchar\new@ifnextchar
+  \array{*\c@MaxMatrixCols c}}
+\makeatother
+
+\author{Felix Kemeth}
+
+\usepackage{graphicx}
+\graphicspath{{../fig/}}
+
+\title{Initializing the Internal States of Echo State Networks}
+
+\begin{document}
+\maketitle
+
+In this project, we set out to find consistent internal states for networks from reservoir computing, that is echo state networks~\cite{jaeger01_the_echo_state,
+  yildiz12_re_visit_echo_state_proper,
+  lu18_attrac_recon_by_machin_learn,
+  tanaka19_recen_advan_physic_reser_comput}.
+This work is closely related to our approach on finding proper initial conditions for
+long-short term memory (LSTM) neural networks~\cite{kemeth2021initializing}.\\
+We illustrate our approach here on discrete-time data stemming from the Brusselator,
+a model system showing oscillatory dynamics~\cite{kondepudi14_brusselator_chapter}.
+Its dynamics are given by
+\begin{align}
+    \dot{u} &= a + u^2v - (b+1)u\label{eq_:1a}\tag{1a}\\
+    \dot{v} &= bu - u^2v,\label{eq_:1b}\tag{1b}
+\end{align}
+with the two real variables $u$ and $v$ and the two real parameters $a$ and $b$, which we keep fixed at $a=1$ and $b=2.1$.
+For this set of parameters $a$ and $b$,
+the only stable attractor of the Brusselator is a stable limit cycle,
+Here, we assume that $v$ is unobserved, and sample $u$ at equidistant points in time.
+A discrete-time trajectory of the full system is shown in Fig.~\ref{fig:brusselator}.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.7\textwidth]{brusselator_trajectory.pdf}
+  \caption{Discrete-time trajectory of the Brusselator system of both variables $u$ and $v$.}
+  \label{fig:brusselator}
+\end{figure}
+
+Echo state networks (ESNs) are composed of a reservoir of randomly connected neurons.
+Here, each neuron $i$ is parametrized by a real variable $h$. The dynamics of each $h$
+follows:
+\begin{equation}
+  h_{t} = \left(1-\lambda\right) h_t + \lambda \tanh\left(\mathbf{W}_{in} x_t + \mathbf{W} h_{t-1}\right)
+\end{equation}
+where $\lambda$ is a pre-defined leakage parameter, $\mathbf{W}_{in}$ is a random matrix connecting the internal states to the input, and $\mathbf{W}$ is a random matrix connection the internal states.
+$x_t$ is the input to the reservoir, and in our case corresponds to time series of the observed variable $u$. The output $y_t$ typically is a linear function of the internal states,
+\begin{equation}
+  y_t = \mathbf{W}_{out} h_t
+\end{equation}
+with an output matrix $\mathbf{W}_{out}$ that has to be obtained. For time series prediction tasks,
+$y_t$ shall represent $u_{t+1}$.
+So we can find $\mathbf{W}_{out}$ by minimizing the mean-squared error between $y_t$ and $u_{t+1}$.
+For the linear output function, we can further use ridge:
+\begin{equation}
+  \mathbf{W}_{out} = \left(H_t' H_t\right)^{-1}H_t'u_{t+1}
+\end{equation}
+where $H_t$ represents a matrix containing the internal states of the ESN at time $t$ and $u_{t+1}$ the true time series of the observed variable at $t+1$.
+For training, we sample $5$ training trajectories from different initial conditions of length $400$ dimensionless time units, sampled at $2000$ equidistant points in time. This results in a time step of $\delta t=0.2$.\\
+Having optimized the ESN in such a way, one can use it for prediction by using the prediction $\hat{u}_{t+1}$ as the input $x_t$ at the next time step.
+As for LSTM neural networks, at $t=0$, the internal states $h_t$ are initialized as $0$s, and a warmup phase has to be provided for the internal states to become synchronized with the input.
+In Fig.~\ref{fig:prediction}, predictions of the trained model together with the true time series are shown.
+Here, a warmup period of $50$ time steps is provided.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\textwidth]{predictions.pdf}
+  \caption{Predictions of the trained ESN and true dynamics using a warmup length of $50$ time steps ($10$ dimensionless time units).}
+  \label{fig:prediction}
+\end{figure}
+
+Given a short input time series, we can also find initial internal states $h_0$ that are consistent with this time series.
+That is, given this $h_0$ value and the first value of the input time series, the model would produce the rest of the time series when run in an autogressive fashion.
+As in Ref.~\cite{kemeth2021initializing}, we can do this by learning the data manifold as a first step.
+We do this by doing diffusion maps on input time series windows, here of length $5$.
+In Fig.~\ref{fig:data_manifold}, the resulting embedding is shown, colored with one of the corresponding internal state values.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.7\textwidth]{../data/dmaps_on_input_data_2d.pdf}
+  \caption{Diffusion maps embedding of the time series windows of length $5$ of the training data.
+    The color corresponds two one of the warmed up internal states of the ESN obtained by forcing it with the training data.}
+  \label{fig:data_manifold}
+\end{figure}
+
+We can now learn the mapping from the data manifold to the corresponding ``mature'' internal state variables using geometric harmonics.
+The predictions on held out test data are shown in Fig.~\ref{fig:gh_predictions}.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\textwidth]{../data/geometric_harmonics_test_h_5.pdf}
+  \caption{Predictions of the learned geometric harmonics mapping from the data manifold, Fig.~\ref{fig:data_manifold},
+    to the corresponding internal states on held out test data.}
+  \label{fig:gh_predictions}
+\end{figure}
+
+We can now use this mapping to find initial states for short, new input time series windows (here, we use length 5).
+If we do this, we can produces more accurate predictions for the given initial time series window.
+This is also depicted in Fig.~\ref{fig:predictions_new}, where initialization using warmup of the same length yields to very inaccurate results.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\textwidth]{../data/figure_7.pdf}
+  \caption{Initial time series window of length 5 (orange) and the corresponding true time series (blue). In green, predictions of the ESN are shown when the internal states are initialized as 0s and warmup is used.
+  In gray, predictions of the ESN are shown when the internal states are initialized using the manifold learning approach discussed above.}
+  \label{fig:predictions_new}
+\end{figure}
+
+
+
+\bibliography{lit.bib}
+\bibliographystyle{unsrt}
+
+
+\end{document}

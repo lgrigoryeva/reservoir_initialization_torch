@@ -1,3 +1,5 @@
+"""Utility functions and config."""
+
 import torch
 import torch.nn as nn
 
@@ -59,7 +61,6 @@ config["PLOTS"]["textwidth_pts"] = 505
 config["PLOTS"]["textwidth_inch"] = config["PLOTS"]["textwidth_pts"]/72.27
 
 
-
 class LorenzDataset(torch.utils.data.Dataset):
     """Dataset of transients obtained from a Brusselator."""
 
@@ -92,6 +93,7 @@ class LorenzDataset(torch.utils.data.Dataset):
         y = self.y[self.ids[index]]
         return torch.tensor(x, dtype=torch.get_default_dtype()), \
             torch.tensor(y, dtype=torch.get_default_dtype())
+
 
 def f_brusselator(t, y, arg_a, arg_b):
     """Temporal evolution of the Brusselator."""
@@ -158,7 +160,6 @@ class BrusselatorDataset(torch.utils.data.Dataset):
         np.savez(path+filename, x=self.x, y=self.y, y_data=self.y_data, tt=self.tt, ids=self.ids)
 
 
-
 class LoadBrusselatorDataset(torch.utils.data.Dataset):
     """Dataset of transients obtained from a Brusselator."""
 
@@ -185,8 +186,6 @@ class LoadBrusselatorDataset(torch.utils.data.Dataset):
         x = self.x[self.ids[index]]
         y = self.y[self.ids[index]]
         return torch.tensor(x, dtype=torch.get_default_dtype()), torch.tensor(y, dtype=torch.get_default_dtype())
-
-
 
 
 class ESN(nn.Module):
@@ -316,6 +315,7 @@ class ESNModel():
             self.device = 'cpu'
         else:
             self.device = device
+        self.device = 'cpu'
 
         print('Using:', self.device)
 
@@ -463,6 +463,7 @@ def progress(train_loss, val_loss):
     return "Train/Loss: {:.6f}  Val/Loss: {:.6f}".format(
         train_loss, val_loss)
 
+
 def nystrom(Xnew, EigVec, Data, EigenVal, eps):
     epsq = (eps)*2
     [Nsamp, dsmall] = EigVec.shape
@@ -475,6 +476,7 @@ def nystrom(Xnew, EigVec, Data, EigenVal, eps):
         phi[j] = (np.sum((w[0, :]/(Wtotal)*EigVec[:, j])))*(1/EigenVal[j])
     return (phi)
 
+
 def create_chunks(data, max_n_transients, length_chunks, shift_betw_chunks):
     chunks = []
     for i in range(int(min(len(data), max_n_transients))):
@@ -482,6 +484,7 @@ def create_chunks(data, max_n_transients, length_chunks, shift_betw_chunks):
             chunks.append(data[i][int(j*shift_betw_chunks):int(j*shift_betw_chunks+length_chunks)])
     chunks = np.squeeze(np.array(chunks))
     return chunks
+
 
 def dmaps(data, eps=None, return_eps=False):
     """Do diffusion maps on data."""

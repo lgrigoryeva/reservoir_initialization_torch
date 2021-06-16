@@ -35,8 +35,10 @@ def get_hidden_states(dataset, model):
                                       return_states=True)[0].detach().cpu().numpy()
     if model.net.quadratic:
         hidden_states = hidden_states[:, :, :model.net.reservoir_size]
-    hidden_states = np.concatenate((np.zeros_like(hidden_states[:, :1]), hidden_states), axis=1)[:, :-1]
+    hidden_states = np.concatenate(
+        (np.zeros_like(hidden_states[:, :1]), hidden_states), axis=1)[:, :-1]
     return hidden_states
+
 
 def nystrom(Xnew, EigVec, Data, EigenVal, eps):
     epsq = (eps)*2
@@ -58,7 +60,6 @@ def plot_integration_w_gh(dataset_test, path='data/'):
     trajectory_w_warmup = np.load(path+'gh_trajectory_w_warmup.npy')
     trajectory = np.load(path+'gh_trajectory.npy')
 
-    # warmup_length = config["DATA"]["lenght_chunks"]
     warmup_length = config["DATA"]["gh_lenght_chunks"]
 
     Ttotal = 400
@@ -77,9 +78,6 @@ def plot_integration_w_gh(dataset_test, path='data/'):
             initial_condition[start_point:min(
                 Ttotal+start_point, len(initial_condition))],
             '.-', label='true', color=COLORS[0], markersize=5)
-    # ax.plot(np.append(tt_init[-warmup_length:], ttnow[:len(trajectory)-warmup_length]),
-    #         trajectory, '.-',
-    #         label='with geometric harmonics', color=COLORS[7], markersize=5)
     ax.plot(ttnow[:len(trajectory)-warmup_length],
             trajectory[warmup_length:], '.-',
             label='with geometric harmonics', color=COLORS[7], markersize=5)
@@ -92,8 +90,8 @@ def plot_integration_w_gh(dataset_test, path='data/'):
     ax.set_xlabel('$t$')
     ax.set_xlim((-2, 20))
     plt.tight_layout()
-    # plt.savefig(config["PATH"]+'integration_w_geometric_harmonics.png', dpi=300)
     plt.savefig(config["PATH"]+'figure_7.eps')
+    plt.savefig(config["PATH"]+'figure_7.pdf')
     plt.close()
 
 
@@ -115,7 +113,7 @@ def main():
     network = ESN(config["MODEL"]["input_size"], config["MODEL"]["reservoir_size"],
                   config["MODEL"]["input_size"], config["MODEL"]["scale_rec"],
                   config["MODEL"]["scale_in"],
-                  quadratic = config["MODEL"]["quadratic"])
+                  quadratic=config["MODEL"]["quadratic"])
     print(network)
 
     # Create model wrapper around architecture
@@ -221,7 +219,6 @@ def main():
                 str(config["DATA"]["gh_lenght_chunks"])+'.pdf')
     plt.close()
 
-
     predictions_test = interp_c(V_test)
 
     fig = plt.figure(figsize=(10, 10))
@@ -284,21 +281,20 @@ def main():
                       config["DATA"]["gh_lenght_chunks"]] - h_pred)
 
     Ttotal = 400
-    trajectory, _  = model.integrate(
+    trajectory, _ = model.integrate(
         torch.tensor(initial_test_chunk[:1], dtype=torch.get_default_dtype()).to(model.device),
         T=Ttotal-1,
         h0=torch.tensor(h_pred, dtype=torch.get_default_dtype()).to(model.device).unsqueeze(0))
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.plot(dataset_test.x[idx, config["DATA"]["max_warmup"]-config["DATA"]
-                           ["gh_lenght_chunks"]:config["DATA"]["max_warmup"]+Ttotal])
-    # ax.plot(dataset_test.x[idx, config["DATA"]["max_warmup"]:config["DATA"]["max_warmup"]+Ttotal])
-    ax.plot(trajectory)
-    ax.set_xlabel('')
-    ax.set_ylabel('')
-    # plt.savefig('')
-    plt.show()
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.plot(dataset_test.x[idx, config["DATA"]["max_warmup"]-config["DATA"]
+    #                        ["gh_lenght_chunks"]:config["DATA"]["max_warmup"]+Ttotal])
+    # ax.plot(trajectory)
+    # ax.set_xlabel('')
+    # ax.set_ylabel('')
+    # # plt.savefig('')
+    # plt.show()
 
     warmup_length_list = [config["DATA"]["gh_lenght_chunks"]]
     initial_condition = torch.tensor(dataset_test.x[idx], dtype=torch.get_default_dtype())
@@ -311,17 +307,13 @@ def main():
     start_point = config["DATA"]["max_warmup"]
 
     warmup_length = warmup_length_list[0]
-    trajectory_w_warmup, _= model.integrate(initial_condition[start_point-warmup_length:start_point],
-                                            Ttotal-1)
+    trajectory_w_warmup, _ = model.integrate(initial_condition[start_point-warmup_length:start_point],
+                                             Ttotal-1)
 
     np.save(config["PATH"]+'gh_trajectory_w_warmup.npy', trajectory_w_warmup)
     np.save(config["PATH"]+'gh_trajectory.npy', trajectory)
 
-
-
     plot_integration_w_gh(dataset_test, path='data/')
-
-
 
 
 if __name__ == "__main__":

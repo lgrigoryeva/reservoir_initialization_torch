@@ -7,3 +7,10 @@ doc/
 
 *.model
 *.cc
+
+*.aux
+*.log
+*.out
+*.pdf
+*.bbl
+*.blg

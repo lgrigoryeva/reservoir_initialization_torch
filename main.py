@@ -12,6 +12,7 @@ torch.set_default_dtype(config["TRAINING"]['dtype'])
 
 
 def main():
+    # Create datasets
     if config["EXAMPLE"] == 'brusselator':
         dataset_train = LoadBrusselatorDataset(path=config["PATH"], filename='training_data.npz',
                                                verbose=True)
@@ -35,13 +36,11 @@ def main():
     dataloader_val = DataLoader(dataset_val, batch_size=config["TRAINING"]["batch_size"],
                                 shuffle=False, num_workers=8, pin_memory=True)
 
-    # batch = next(iter(dataloader_train))
-
     # Create the network architecture
     network = ESN(config["MODEL"]["input_size"], config["MODEL"]["reservoir_size"],
                   config["MODEL"]["input_size"], config["MODEL"]["scale_rec"],
                   config["MODEL"]["scale_in"],
-                  quadratic = config["MODEL"]["quadratic"])
+                  quadratic=config["MODEL"]["quadratic"])
     print(network)
 
     # Create model wrapper around architecture
@@ -64,15 +63,16 @@ def main():
         progress_bar.set_description(progress(train_loss, val_loss))
     model.save_network(config["PATH"]+'model_')
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.plot(np.arange(config["TRAINING"]["epochs"]), train_loss_list, label='train loss')
-    ax.plot(np.arange(config["TRAINING"]["epochs"]), val_loss_list, label='validation loss')
-    ax.set_xlabel('epoch')
-    ax.set_yscale('log')
-    plt.legend()
-    plt.savefig('fig/loss.pdf')
-    plt.show()
+    if not config["TRAINING"]["ridge"]:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(np.arange(config["TRAINING"]["epochs"]), train_loss_list, label='train loss')
+        ax.plot(np.arange(config["TRAINING"]["epochs"]), val_loss_list, label='validation loss')
+        ax.set_xlabel('epoch')
+        ax.set_yscale('log')
+        plt.legend()
+        plt.savefig('fig/loss.pdf')
+        plt.show()
 
     warmup = config["DATA"]["max_warmup"]
     predictions, _ = model.integrate(torch.tensor(
@@ -81,11 +81,11 @@ def main():
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.plot(dataset_test.tt[:-1], dataset_test.x[0][:, 0])
-    if len(predictions.shape)>1:
-        ax.plot(dataset_test.tt[:-1], predictions[:, 0])
+    ax.plot(dataset_test.tt[:-1], dataset_test.x[0][:, 0], label='true')
+    if len(predictions.shape) > 1:
+        ax.plot(dataset_test.tt[:-1], predictions[:, 0], label='prediction')
     else:
-        ax.plot(dataset_test.tt[:-1], predictions)
+        ax.plot(dataset_test.tt[:-1], predictions, label='prediction')
     ax.axvline(x=dataset_test.tt[warmup], color='k')
     ax.set_xlabel('$t$')
     ax.set_ylabel('$x$')
