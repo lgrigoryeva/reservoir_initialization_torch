@@ -60,7 +60,7 @@ Echo state networks (ESNs) are composed of a reservoir of randomly connected neu
 Here, each neuron $i$ is parametrized by a real variable $h$. The dynamics of each $h$
 follows:
 \begin{equation}
-  h_{t} = \left(1-\lambda\right) h_t + \lambda \tanh\left(\mathbf{W}_{in} x_t + \mathbf{W} h_{t-1}\right)
+  h_{t} = \left(1-\lambda\right) h_{t-1} + \lambda \tanh\left(\mathbf{W}_{in} x_t + \mathbf{W} h_{t-1}\right)
 \end{equation}
 where $\lambda$ is a pre-defined leakage parameter, $\mathbf{W}_{in}$ is a random matrix connecting the internal states to the input, and $\mathbf{W}$ is a random matrix connection the internal states.
 $x_t$ is the input to the reservoir, and in our case corresponds to time series of the observed variable $u$. The output $y_t$ typically is a linear function of the internal states,
@@ -72,9 +72,9 @@ $y_t$ shall represent $u_{t+1}$.
 So we can find $\mathbf{W}_{out}$ by minimizing the mean-squared error between $y_t$ and $u_{t+1}$.
 For the linear output function, we can further use ridge:
 \begin{equation}
-  \mathbf{W}_{out} = \left(H_t' H_t\right)^{-1}H_t'u_{t+1}
+  \mathbf{W}_{out} = \left(H_t' H_t+\epsilon\right)^{-1}H_t'u_{t+1}
 \end{equation}
-where $H_t$ represents a matrix containing the internal states of the ESN at time $t$ and $u_{t+1}$ the true time series of the observed variable at $t+1$.
+with $\epsilon=1e-6$ and where $H_t$ represents a matrix containing the internal states of the ESN at time $t$ and $u_{t+1}$ the true time series of the observed variable at $t+1$.
 For training, we sample $5$ training trajectories from different initial conditions of length $400$ dimensionless time units, sampled at $2000$ equidistant points in time. This results in a time step of $\delta t=0.2$.\\
 Having optimized the ESN in such a way, one can use it for prediction by using the prediction $\hat{u}_{t+1}$ as the input $x_t$ at the next time step.
 As for LSTM neural networks, at $t=0$, the internal states $h_t$ are initialized as $0$s, and a warmup phase has to be provided for the internal states to become synchronized with the input.

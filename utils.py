@@ -42,6 +42,7 @@ config["DATA"]["integration_steps"] = 250
 config["DATA"]["gh_lenght_chunks"] = 5
 
 config["MODEL"] = {}
+# Number of variables to use when using the lorenz system
 config["MODEL"]["input_size"] = 3
 config["MODEL"]["reservoir_size"] = 2000
 config["MODEL"]["scale_rec"] = 0.9
