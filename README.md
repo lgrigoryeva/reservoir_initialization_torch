@@ -1,14 +1,14 @@
-# Learning PDEs for algorithms
+# Reservoir Initialization
 
 In this repository, there a are two run files:
 
 1. One file trains an echo state network on discrete-time trajectories of either the Brusselator or Lorenz system.
-   This can be done by runnning  
+   This can be done by runnning
    ```
    python main.py
    ```
 2. Having trained an echo state network, one can learn a mapping from the data manifold to the internal states of the network.
-   This can be done by running  
+   This can be done by running
    ```
    python do_geometric_harmonics.py
    ```
