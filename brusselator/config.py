@@ -25,13 +25,13 @@ config["TRAINING"]["ridge"] = True
 config["TRAINING"]["dtype"] = torch.float64
 config["TRAINING"]["gh_num_eigenpairs"] = 100
 config["TRAINING"]["offset"] = 10
-config["TRAINING"]["ridge_factor"] = 1e-7
+config["TRAINING"]["ridge_factor"] = 5e-7
 config["TRAINING"]["device"] = "cpu"
 
 config["MODEL"] = {}
 # Number of variables to use when using the lorenz system
 config["MODEL"]["input_size"] = 1
-config["MODEL"]["reservoir_size"] = 1024
+config["MODEL"]["reservoir_size"] = 2048
 config["MODEL"]["hidden_size"] = []
 config["MODEL"]["scale_rec"] = 0.9
 config["MODEL"]["scale_in"] = 0.02

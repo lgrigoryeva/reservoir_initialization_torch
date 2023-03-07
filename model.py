@@ -3,6 +3,8 @@ import torch
 from torch import nn
 from tqdm.auto import tqdm
 
+from sklearn.linear_model import Ridge
+
 
 class DenseStack(nn.Module):
     """
@@ -174,20 +176,15 @@ class ESNModel:
             x, y = torch.tensor(self.dataloader_train.dataset.input_data, dtype=torch.float64),\
                 torch.tensor(self.dataloader_train.dataset.output_data, dtype=torch.float64)
             out, _ = self.net(x.to(self.device), return_states=True)
-            # x = x[:, self.offset:]
-            # y = y[:, self.offset:]
-            # out = out[:, self.offset:]
-            ytmp = torch.transpose(y.view(-1, self.net.input_size).to(self.device), 0, 1)
-            outtmp = torch.transpose(out.view(-1, out.shape[-1]), 0, 1).to(self.device)
-            ridge = torch.matmul(
-                torch.matmul(ytmp, torch.transpose(outtmp, 0, 1)),
-                torch.inverse(
-                    torch.matmul(outtmp, torch.transpose(outtmp, 0, 1))
-                    + torch.tensor(self.ridge_factor).to(self.device)
-                    * torch.eye(outtmp.shape[0], outtmp.shape[0]).to("cpu")
-                ),
-            )
-            self.net.readout.fc_layers[0].weight = torch.nn.Parameter(ridge.to(self.device))
+            out_np = out.reshape(-1, out.shape[-1]).detach().cpu().numpy()
+            y_np = y.reshape(-1, self.net.input_size).detach().cpu().numpy()
+            print(out_np.shape)
+            print(y_np.shape)
+
+            clf = Ridge(alpha=self.ridge_factor)
+            clf.fit(out_np, y_np)
+            self.net.readout.fc_layers[0].weight = torch.nn.Parameter(
+                torch.tensor(clf.coef_, dtype=torch.float64).to(self.device))
             self.net.readout.fc_layers[0].bias = torch.nn.Parameter(
                 torch.zeros_like(self.net.readout.fc_layers[0].bias).to(self.device)
             )
