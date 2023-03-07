@@ -176,10 +176,10 @@ class ESNModel:
             x, y = torch.tensor(self.dataloader_train.dataset.input_data, dtype=torch.float64),\
                 torch.tensor(self.dataloader_train.dataset.output_data, dtype=torch.float64)
             out, _ = self.net(x.to(self.device), return_states=True)
+            out = out[:, self.offset:]
+            y = y[:, self.offset:]
             out_np = out.reshape(-1, out.shape[-1]).detach().cpu().numpy()
             y_np = y.reshape(-1, self.net.input_size).detach().cpu().numpy()
-            print(out_np.shape)
-            print(y_np.shape)
 
             clf = Ridge(alpha=self.ridge_factor)
             clf.fit(out_np, y_np)
