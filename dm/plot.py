@@ -2,12 +2,11 @@
 
 """
 
-__all__ = ['plot_diffusion_maps', 'plot_results']
+__all__ = ["plot_diffusion_maps", "plot_results"]
 
 from typing import Tuple
 
 import matplotlib.pyplot as plt
-
 import numpy as np
 
 from . import DiffusionMaps, default
@@ -31,9 +30,21 @@ def get_rows_and_columns(num_plots: int) -> Tuple[int, int]:
     """
     if num_plots <= 15:
         layouts = {
-            1: (1, 1), 2: (1, 2), 3: (1, 3), 4: (2, 2), 5: (2, 3),
-            6: (2, 3), 7: (2, 4), 8: (2, 4), 9: (3, 9), 10: (2, 5),
-            11: (2, 6),  12: (3, 10), 13: (2, 7),  14:(2, 8), 15:(2, 9)  
+            1: (1, 1),
+            2: (1, 2),
+            3: (1, 3),
+            4: (2, 2),
+            5: (2, 3),
+            6: (2, 3),
+            7: (2, 4),
+            8: (2, 4),
+            9: (3, 9),
+            10: (2, 5),
+            11: (2, 6),
+            12: (3, 10),
+            13: (2, 7),
+            14: (2, 8),
+            15: (2, 9),
         }
         rows, cols = layouts[num_plots]
     else:
@@ -43,8 +54,7 @@ def get_rows_and_columns(num_plots: int) -> Tuple[int, int]:
     return rows, cols
 
 
-def plot_results(data: np.array, eigenvalues: np.array,
-                 eigenvectors: np.array) -> None:
+def plot_results(data: np.array, eigenvalues: np.array, eigenvectors: np.array) -> None:
     """Plot results.
 
     Plots three figures. The first one is shows the modulus of the spectrum
@@ -66,34 +76,33 @@ def plot_results(data: np.array, eigenvalues: np.array,
     x = data[:, 0]
     y = data[:, 1]
 
-    num_eigenvectors = max(eigenvectors.shape[0]-1, default.num_eigenpairs-1)
+    num_eigenvectors = max(eigenvectors.shape[0] - 1, default.num_eigenpairs - 1)
 
     plt.figure(1)
     plt.step(np.arange(1, eigenvalues.shape[0]), np.abs(eigenvalues[1:]))
     plt.xticks(range(1, eigenvalues.shape[0]))
-    plt.xlabel('Eigenvalue index')
-    plt.ylabel('| Eigenvalue |')
-    plt.title('Eigenvalues')
+    plt.xlabel("Eigenvalue index")
+    plt.ylabel("| Eigenvalue |")
+    plt.title("Eigenvalues")
 
     plt.figure(2)
     rows, cols = get_rows_and_columns(num_eigenvectors)
     for k in range(1, eigenvectors.shape[0]):
         plt.subplot(rows, cols, k)
-        plt.scatter(x, y, c=eigenvectors[k, :], cmap='RdBu_r', rasterized=True)
-        plt.xlabel('$x$')
-        plt.ylabel('$y$')
-        plt.axis('off')
-        plt.title('$\\psi_{{{}}}$'.format(k))
-    
-    for m in range(1,15):
-        plt.figure(m+3)
-        plt.scatter(eigenvectors[1, :], eigenvectors[m, :],
-                color='black', alpha=0.5)
-        plt.xlabel('$\\psi_1$')
-        plt.ylabel('$\\psi_{}$'.format(m))
-        plt.title('Data set in diffusion map space')
+        plt.scatter(x, y, c=eigenvectors[k, :], cmap="RdBu_r", rasterized=True)
+        plt.xlabel("$x$")
+        plt.ylabel("$y$")
+        plt.axis("off")
+        plt.title("$\\psi_{{{}}}$".format(k))
 
-    # plt.tight_layout()
+    for m in range(1, 15):
+        plt.figure(m + 3)
+        plt.scatter(eigenvectors[1, :], eigenvectors[m, :], color="black", alpha=0.5)
+        plt.xlabel("$\\psi_1$")
+        plt.ylabel("$\\psi_{}$".format(m))
+        plt.title("Data set in diffusion map space")
+
+        # plt.tight_layout()
         plt.show()
 
 

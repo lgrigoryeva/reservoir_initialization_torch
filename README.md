@@ -1,5 +1,17 @@
 # Reservoir Initialization
 
+## Install
+
+   ```
+   pip install -r requirements.txt
+   ```
+
+
+   ```
+   pre-commit install
+   ```
+
+
 In this repository, there a are two run files:
 
 1. One file trains an echo state network on discrete-time trajectories of either the Brusselator or Lorenz system.

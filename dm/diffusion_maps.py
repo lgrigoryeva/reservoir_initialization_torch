@@ -8,22 +8,25 @@ Harmonic Analysis, 21(1), 5–30. DOI:10.1016/j.acha.2006.04.006
 
 """
 
-__all__ = ['BaseDiffusionMaps', 'SparseDiffusionMaps', 'DenseDiffusionMaps',
-           'DiffusionMaps', 'downsample']
+__all__ = [
+    "BaseDiffusionMaps",
+    "SparseDiffusionMaps",
+    "DenseDiffusionMaps",
+    "DiffusionMaps",
+    "downsample",
+]
 
 
 import logging
 import sys
-from typing import Optional, Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import scipy
 import scipy.sparse
 import scipy.spatial
 
-from . import default
-from . import utils
-from . import clock
+from . import clock, default, utils
 
 
 def downsample(data: np.array, num_samples: int) -> np.array:
@@ -47,8 +50,7 @@ def downsample(data: np.array, num_samples: int) -> np.array:
 
     """
     assert num_samples <= data.shape[0]
-    indices = sorted(np.random.choice(range(data.shape[0]), num_samples,
-                                      replace=False))
+    indices = sorted(np.random.choice(range(data.shape[0]), num_samples, replace=False))
     return data[indices, :]
 
 
@@ -59,10 +61,10 @@ def DiffusionMaps(*args, **kwargs):
     details.
 
     """
-    cut_off = kwargs.get('cut_off')
+    cut_off = kwargs.get("cut_off")
 
     if cut_off is None or np.isinf(cut_off):
-        kwargs['cut_off'] = None
+        kwargs["cut_off"] = None
         return DenseDiffusionMaps(*args, **kwargs)
     else:
         return SparseDiffusionMaps(*args, **kwargs)
@@ -86,14 +88,18 @@ class BaseDiffusionMaps:
         Eigenvalues of `kernel_matrix`.
 
     """
-    def __init__(self, points: np.array, epsilon: float,
-                 cut_off: Optional[float] = None,
-                 num_eigenpairs: Optional[int] = default.num_eigenpairs,
-                 normalize_kernel: Optional[bool] = True,
-                 renormalization: Optional[float] = default.renormalization,
-                 kdtree_options: Optional[Dict] = None,
-                 use_cuda: Optional[bool] = default.use_cuda) \
-            -> None:
+
+    def __init__(
+        self,
+        points: np.array,
+        epsilon: float,
+        cut_off: Optional[float] = None,
+        num_eigenpairs: Optional[int] = default.num_eigenpairs,
+        normalize_kernel: Optional[bool] = True,
+        renormalization: Optional[float] = default.renormalization,
+        kdtree_options: Optional[Dict] = None,
+        use_cuda: Optional[bool] = default.use_cuda,
+    ) -> None:
         """Compute diffusion maps.
 
         This function computes the eigendecomposition of the transition
@@ -150,8 +156,9 @@ class BaseDiffusionMaps:
         pass
 
     @staticmethod
-    def make_stochastic_matrix(matrix: scipy.sparse.csr_matrix) \
-            -> scipy.sparse.csr_matrix:
+    def make_stochastic_matrix(
+        matrix: scipy.sparse.csr_matrix,
+    ) -> scipy.sparse.csr_matrix:
         """Convert a non-negative matrix into a row-stochastic matrix.
 
         Carries out the normalization (in the 1-norm) of each row of a
@@ -173,11 +180,8 @@ class BaseDiffusionMaps:
 
     @staticmethod
     @clock.log
-    def solve_eigenproblem(kernel_matrix, num_eigenpairs: int,
-                           use_cuda: bool) -> Tuple[np.array, np.array]:
-        """Solve eigenvalue problem using CPU or GPU solver.
-
-        """
+    def solve_eigenproblem(kernel_matrix, num_eigenpairs: int, use_cuda: bool) -> Tuple[np.array, np.array]:
+        """Solve eigenvalue problem using CPU or GPU solver."""
         if use_cuda is True:
             from .gpu_eigensolver import eigensolver
         else:
@@ -208,15 +212,19 @@ class SparseDiffusionMaps(BaseDiffusionMaps):
         Eigenvalues of `kernel_matrix`.
 
     """
-    def __init__(self, points: np.array, epsilon: float,
-                 cut_off: Optional[float] = None,
-                 num_eigenpairs: Optional[int] = default.num_eigenpairs,
-                 #num_eigenpairs: Optional[int] = 15,
-                 normalize_kernel: Optional[bool] = True,
-                 renormalization: Optional[float] = default.renormalization,
-                 kdtree_options: Optional[Dict] = None,
-                 use_cuda: Optional[bool] = default.use_cuda) \
-            -> None:
+
+    def __init__(
+        self,
+        points: np.array,
+        epsilon: float,
+        cut_off: Optional[float] = None,
+        num_eigenpairs: Optional[int] = default.num_eigenpairs,
+        # num_eigenpairs: Optional[int] = 15,
+        normalize_kernel: Optional[bool] = True,
+        renormalization: Optional[float] = default.renormalization,
+        kdtree_options: Optional[Dict] = None,
+        use_cuda: Optional[bool] = default.use_cuda,
+    ) -> None:
         """Compute diffusion maps.
 
         This function computes the eigendecomposition of the transition
@@ -259,25 +267,20 @@ class SparseDiffusionMaps(BaseDiffusionMaps):
         distance_matrix = utils.coo_tocsr(self.compute_distance_matrix())
         kernel_matrix = self.compute_kernel_matrix(distance_matrix)
         if normalize_kernel is True:
-            kernel_matrix = self.normalize_kernel_matrix(kernel_matrix,
-                                                         renormalization)
+            kernel_matrix = self.normalize_kernel_matrix(kernel_matrix, renormalization)
         self.kernel_matrix = kernel_matrix
         self.renormalization = renormalization if normalize_kernel else None
 
-        ew, ev = self.solve_eigenproblem(self.kernel_matrix, num_eigenpairs,
-                                         use_cuda)
+        ew, ev = self.solve_eigenproblem(self.kernel_matrix, num_eigenpairs, use_cuda)
         if np.linalg.norm(ew.imag > 1e2 * sys.float_info.epsilon, np.inf):
-            raise ValueError('Eigenvalues have non-negligible imaginary part')
+            raise ValueError("Eigenvalues have non-negligible imaginary part")
         self.eigenvalues = ew.real
         self.eigenvectors = ev.real
 
     @staticmethod
     @clock.log
-    def compute_kdtree(points: np.array, kdtree_options: Optional[Dict]) \
-            -> None:
-        """Compute kd-tree from points.
-
-        """
+    def compute_kdtree(points: np.array, kdtree_options: Optional[Dict]) -> None:
+        """Compute kd-tree from points."""
         if kdtree_options is None:
             kdtree_options = dict()
 
@@ -285,23 +288,20 @@ class SparseDiffusionMaps(BaseDiffusionMaps):
 
     @clock.log
     def compute_distance_matrix(self) -> scipy.sparse.coo_matrix:
-        """Compute sparse distance matrix in COO format.
+        """Compute sparse distance matrix in COO format."""
+        distance_matrix = self._kdtree.sparse_distance_matrix(self._kdtree, self._cut_off, output_type="coo_matrix")
 
-        """
-        distance_matrix \
-            = self._kdtree.sparse_distance_matrix(self._kdtree,
-                                                  self._cut_off,
-                                                  output_type='coo_matrix')
-
-        logging.debug('Distance matrix has {} nonzero entries ({:.4f}% dense).'
-                      .format(distance_matrix.nnz, distance_matrix.nnz
-                              / np.prod(distance_matrix.shape) * 100))
+        logging.debug(
+            "Distance matrix has {} nonzero entries ({:.4f}% dense).".format(
+                distance_matrix.nnz,
+                distance_matrix.nnz / np.prod(distance_matrix.shape) * 100,
+            )
+        )
 
         return distance_matrix
 
     @clock.log
-    def compute_kernel_matrix(self, distance_matrix: scipy.sparse.spmatrix) \
-            -> scipy.sparse.spmatrix:
+    def compute_kernel_matrix(self, distance_matrix: scipy.sparse.spmatrix) -> scipy.sparse.spmatrix:
         """Compute kernel matrix.
 
         Returns the (unnormalized) Gaussian kernel matrix corresponding to
@@ -326,9 +326,9 @@ class SparseDiffusionMaps(BaseDiffusionMaps):
         return kernel_matrix
 
     @clock.log
-    def normalize_kernel_matrix(self, matrix: scipy.sparse.csr_matrix,
-                                alpha: Optional[float] = 1) \
-            -> scipy.sparse.csr_matrix:
+    def normalize_kernel_matrix(
+        self, matrix: scipy.sparse.csr_matrix, alpha: Optional[float] = 1
+    ) -> scipy.sparse.csr_matrix:
         """Compute normalized random walk Laplacian from similarity matrix.
 
         Parameters
@@ -346,7 +346,7 @@ class SparseDiffusionMaps(BaseDiffusionMaps):
             A (suitably normalized) row-stochastic random walk Laplacian.
 
         """
-        assert 0 <= alpha <= 1, 'Invalid normalization exponent.'
+        assert 0 <= alpha <= 1, "Invalid normalization exponent."
 
         if alpha > 0:
             shape = matrix.shape
@@ -365,8 +365,9 @@ class SparseDiffusionMaps(BaseDiffusionMaps):
 
     @staticmethod
     @clock.log
-    def make_stochastic_matrix(matrix: scipy.sparse.csr_matrix) \
-            -> scipy.sparse.csr_matrix:
+    def make_stochastic_matrix(
+        matrix: scipy.sparse.csr_matrix,
+    ) -> scipy.sparse.csr_matrix:
         """Convert a sparse non-negative matrix into a row-stochastic matrix.
 
         Carries out the normalization (in the 1-norm) of each row of a
@@ -387,7 +388,7 @@ class SparseDiffusionMaps(BaseDiffusionMaps):
         data = matrix.data
         indptr = matrix.indptr
         for i in range(matrix.shape[0]):
-            a, b = indptr[i:i+2]
+            a, b = indptr[i : i + 2]
             norm1 = np.sum(data[a:b])
             data[a:b] /= norm1
 
@@ -395,52 +396,51 @@ class SparseDiffusionMaps(BaseDiffusionMaps):
 
     @clock.log
     def kernel_function(self, distances: np.array) -> np.array:
-        """Evaluate kernel function.
-
-        """
+        """Evaluate kernel function."""
         return np.exp(-np.square(distances) / (2.0 * self.epsilon))
 
 
 class DenseDiffusionMaps(BaseDiffusionMaps):
-    def __init__(self, points: np.array, epsilon: float,
-                 cut_off: Optional[float] = None,
-                 num_eigenpairs: Optional[int] = default.num_eigenpairs,
-                 normalize_kernel: Optional[bool] = True,
-                 renormalization: Optional[float] = default.renormalization,
-                 kdtree_options: Optional[Dict] = None,
-                 use_cuda: Optional[bool] = default.use_cuda) -> None:
+    def __init__(
+        self,
+        points: np.array,
+        epsilon: float,
+        cut_off: Optional[float] = None,
+        num_eigenpairs: Optional[int] = default.num_eigenpairs,
+        normalize_kernel: Optional[bool] = True,
+        renormalization: Optional[float] = default.renormalization,
+        kdtree_options: Optional[Dict] = None,
+        use_cuda: Optional[bool] = default.use_cuda,
+    ) -> None:
         self.points = points
         self.epsilon = epsilon
 
         if cut_off is not None:
             import warnings
-            warnings.warn('A cut off was specified for dense diffusion maps.')
 
-        distance_matrix_squared = scipy.spatial.distance.pdist(points, metric='sqeuclidean')  # noqa
+            warnings.warn("A cut off was specified for dense diffusion maps.")
+
+        distance_matrix_squared = scipy.spatial.distance.pdist(points, metric="sqeuclidean")  # noqa
         kernel_matrix = np.exp(-distance_matrix_squared / (2.0 * epsilon))
         kernel_matrix = scipy.spatial.distance.squareform(kernel_matrix)
         if normalize_kernel is True:
-            kernel_matrix = self.normalize_kernel_matrix(kernel_matrix,
-                                                         renormalization)
+            kernel_matrix = self.normalize_kernel_matrix(kernel_matrix, renormalization)
         self.kernel_matrix = kernel_matrix
         self.renormalization = renormalization if normalize_kernel else None
 
         if use_cuda is True:
             import warnings
-            warnings.warn('Dense diffusion maps are not implemented on the '
-                          'GPU. Using the CPU instead.')
 
-        ew, ev = self.solve_eigenproblem(self.kernel_matrix, num_eigenpairs,
-                                         use_cuda=False)
+            warnings.warn("Dense diffusion maps are not implemented on the " "GPU. Using the CPU instead.")
+
+        ew, ev = self.solve_eigenproblem(self.kernel_matrix, num_eigenpairs, use_cuda=False)
         if np.linalg.norm(ew.imag > 1e2 * sys.float_info.epsilon, np.inf):
-            raise ValueError('Eigenvalues have non-negligible imaginary part')
+            raise ValueError("Eigenvalues have non-negligible imaginary part")
         self.eigenvalues = ew.real
         self.eigenvectors = ev.real
 
-    def normalize_kernel_matrix(self, matrix: np.array,
-                                alpha: Optional[float] = 1) \
-            -> np.array:
-        assert 0 <= alpha <= 1, 'Invalid normalization exponent.'
+    def normalize_kernel_matrix(self, matrix: np.array, alpha: Optional[float] = 1) -> np.array:
+        assert 0 <= alpha <= 1, "Invalid normalization exponent."
 
         if alpha > 0:
             row_sums = np.asarray(matrix.sum(axis=1)).squeeze()
@@ -457,6 +457,6 @@ class DenseDiffusionMaps(BaseDiffusionMaps):
 
     @staticmethod
     def make_stochastic_matrix(matrix: np.array) -> np.array:
-        assert matrix.shape[0] == matrix.shape[1], 'Matrix must be square'
+        assert matrix.shape[0] == matrix.shape[1], "Matrix must be square"
         inv_diag = 1.0 / np.sum(matrix, axis=1)
         return np.multiply(inv_diag[:, np.newaxis], matrix)

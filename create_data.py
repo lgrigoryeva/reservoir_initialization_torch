@@ -1,12 +1,7 @@
+"""Script to create training, validation and test data."""
 import numpy as np
 
-import scipy.integrate as sp
-
-import torch
-
-from tqdm.auto import tqdm
-
-from utils import config, BrusselatorDataset
+from utils import BrusselatorDataset, config
 
 # For reproduceability
 np.random.seed(42)
@@ -25,15 +20,13 @@ def main(config):
     config["DATA"]["l_trajectories"] = 100
     config["DATA"]["l_trajectories_test"] = 500
 
-
     dataset_train = BrusselatorDataset(config["DATA"]["n_train"], config["DATA"]["l_trajectories"])
     dataset_val = BrusselatorDataset(config["DATA"]["n_val"], config["DATA"]["l_trajectories"])
-    dataset_test = BrusselatorDataset(
-        config["DATA"]["n_test"], config["DATA"]["l_trajectories_test"])
+    dataset_test = BrusselatorDataset(config["DATA"]["n_test"], config["DATA"]["l_trajectories_test"])
 
-    dataset_train.save_data(path=config["PATH"], filename='training_data.npz')
-    dataset_val.save_data(path=config["PATH"], filename='validation_data.npz')
-    dataset_test.save_data(path=config["PATH"], filename='test_data.npz')
+    dataset_train.save_data(path=config["PATH"], filename="training_data.npz")
+    dataset_val.save_data(path=config["PATH"], filename="validation_data.npz")
+    dataset_test.save_data(path=config["PATH"], filename="test_data.npz")
 
 
 if __name__ == "__main__":

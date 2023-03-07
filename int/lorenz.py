@@ -1,36 +1,21 @@
-"""Integrate Lorenz system."""
-
-######################################################################################
-#                                                                                    #
-# Mar 2017                                                                           #
-# felix@kemeth.de                                                                    #
-#                                                                                    #
-######################################################################################
-
-
+"""Functions to integrate Lorenz system."""
 import numpy as np
-import scipy.integrate as sp
 from scipy.integrate import solve_ivp
 
 
-#############################################################################
-# INTEGRATION
-#############################################################################
-
-
-def create_initial_conditions(ic='standard'):
+def create_initial_conditions(ic="standard"):
     """Specify initial conditions."""
-    if ic == 'standard':
+    if ic == "standard":
         x0 = 10.0
         y0 = 1.0
         z0 = 0.0
-    elif ic == 'random':
+    elif ic == "random":
         # x0 = 20.0*np.random.random()
         # y0 = 2.0*np.random.random()
         # z0 = 1.0*np.random.random()
-        x0 = 0.2*np.random.random()
-        y0 = 0.2*np.random.random()
-        z0 = 0.2*np.random.random()
+        x0 = 0.2 * np.random.random()
+        y0 = 0.2 * np.random.random()
+        z0 = 0.2 * np.random.random()
         x0 = 0.1
         y0 = 0.1
         z0 = 0.1
@@ -47,15 +32,29 @@ def f(t, y, arg_sigma, arg_rho, arg_beta):
 
 def jac(t, y, arg_sigma, arg_rho, arg_beta):
     """Calculate Jacobian."""
-    J = np.array([[-arg_sigma, arg_sigma, 0], [arg_rho -
-                                               y[2], -1, -y[0]], [y[1], y[0], - arg_beta]])
+    J = np.array(
+        [
+            [-arg_sigma, arg_sigma, 0],
+            [arg_rho - y[2], -1, -y[0]],
+            [y[1], y[0], -arg_beta],
+        ]
+    )
     return J
 
 
-def integrate(sigma=10.0, rho=28.0, beta=8.0 / 3.0, tmin=50, dt=1e-2, T=20000, ic='standard', Ainit=0):
+def integrate(
+    sigma=10.0,
+    rho=28.0,
+    beta=8.0 / 3.0,
+    tmin=50,
+    dt=1e-2,
+    T=20000,
+    ic="standard",
+    Ainit=0,
+):
     """Integrate Lorenz oscillator."""
     # Write the parameters into a dictionary for future use.
-    tmax = T*dt+tmin
+    tmax = T * dt + tmin
     Adict = dict()
     Adict["sigma"] = sigma
     Adict["rho"] = rho
@@ -66,16 +65,16 @@ def integrate(sigma=10.0, rho=28.0, beta=8.0 / 3.0, tmin=50, dt=1e-2, T=20000, i
     Adict["T"] = T
     Adict["ic"] = ic
 
-    if ic == 'manual':
-        if (Ainit.shape[0] != 2):
-            raise ValueError('Initial data must have two real entries.')
+    if ic == "manual":
+        if Ainit.shape[0] != 2:
+            raise ValueError("Initial data must have two real entries.")
         y0 = Ainit
     else:
         y0 = create_initial_conditions(ic)
 
     Adict["init"] = y0
 
-    tt = np.linspace(tmin, tmax, Adict["T"]+1)
+    tt = np.linspace(tmin, tmax, Adict["T"] + 1)
 
     Adict["tt"] = tt
 
