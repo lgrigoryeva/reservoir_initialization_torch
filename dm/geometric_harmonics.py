@@ -18,6 +18,7 @@ import scipy.spatial
 from scipy.interpolate.interpnd import NDInterpolatorBase, _ndim_coords_from_arrays
 
 from dm.diffusion_maps import DiffusionMaps
+
 # from datafold.dynfold import DiffusionMaps
 
 

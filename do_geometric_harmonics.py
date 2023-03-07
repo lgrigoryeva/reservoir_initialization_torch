@@ -12,6 +12,7 @@ from tqdm.auto import tqdm
 
 # import dm as diffusion_maps
 from dm import diffusion_maps, geometric_harmonics
+
 # from datafold import dynfold as diffusion_maps
 from utils import ESN, ESNModel, LoadBrusselatorDataset, config, create_chunks, dmaps
 
