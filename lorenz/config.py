@@ -8,9 +8,9 @@ config["DATA"]["n_test"] = 4
 config["DATA"]["l_trajectories"] = 100
 config["DATA"]["l_trajectories_test"] = 500
 config["DATA"]["parameters"] = {}
-config["DATA"]["parameters"]['sigma'] = 10.0
-config["DATA"]["parameters"]['rho'] = 28.0
-config["DATA"]["parameters"]['beta'] = 8.0/3.0
+config["DATA"]["parameters"]["sigma"] = 10.0
+config["DATA"]["parameters"]["rho"] = 28.0
+config["DATA"]["parameters"]["beta"] = 8.0 / 3.0
 config["DATA"]["max_warmup"] = 50
 config["PATH"] = "examples/lorenz/data/"
 
@@ -23,7 +23,7 @@ config["TRAINING"]["dtype"] = torch.float64
 config["TRAINING"]["gh_num_eigenpairs"] = 100
 config["TRAINING"]["offset"] = 10
 config["TRAINING"]["ridge_factor"] = 2e-6
-config["TRAINING"]["device"] = 'cpu'
+config["TRAINING"]["device"] = "cpu"
 
 config["MODEL"] = {}
 # Number of variables to use when using the lorenz system

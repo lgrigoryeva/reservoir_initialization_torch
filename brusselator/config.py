@@ -11,8 +11,8 @@ config["DATA"]["n_test"] = 4
 config["DATA"]["l_trajectories"] = 100
 config["DATA"]["l_trajectories_test"] = 500
 config["DATA"]["parameters"] = {}
-config["DATA"]["parameters"]['a'] = 1.0
-config["DATA"]["parameters"]['b'] = 2.1
+config["DATA"]["parameters"]["a"] = 1.0
+config["DATA"]["parameters"]["b"] = 2.1
 config["DATA"]["max_warmup"] = 50
 config["PATH"] = "examples/brusselator/data/"
 
@@ -25,8 +25,8 @@ config["TRAINING"]["ridge"] = True
 config["TRAINING"]["dtype"] = torch.float64
 config["TRAINING"]["gh_num_eigenpairs"] = 100
 config["TRAINING"]["offset"] = 10
-config["TRAINING"]["ridge_factor"] = 1e-9
-config["TRAINING"]["device"] = 'cpu'
+config["TRAINING"]["ridge_factor"] = 1e-7
+config["TRAINING"]["device"] = "cpu"
 
 config["MODEL"] = {}
 # Number of variables to use when using the lorenz system

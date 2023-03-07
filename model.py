@@ -1,6 +1,6 @@
+import numpy as np
 import torch
 from torch import nn
-import numpy as np
 from tqdm.auto import tqdm
 
 
@@ -51,7 +51,7 @@ class DenseStack(nn.Module):
             # Fully connected layer
             input_tensor = self.fc_layers[i_layer](input_tensor)
             # Apply activation function, but not after last layer
-            if i_layer < len(self.fc_layers)-1:
+            if i_layer < len(self.fc_layers) - 1:
                 input_tensor = self.acts[i_layer](input_tensor)
         return input_tensor
 
@@ -68,7 +68,7 @@ class ESN(nn.Module):
         scale_rec: float = 1 / 1.1,
         scale_in: float = 1.0 / 40.0,
         leaking_rate: float = 0.5,
-        rec_rescaling_method: str = "specrad"  # Either "norm" or "specrad"
+        rec_rescaling_method: str = "specrad",  # Either "norm" or "specrad"
     ):
         super(ESN, self).__init__()
 
@@ -133,14 +133,9 @@ class ESN(nn.Module):
 
 
 class ESNModel:
-    def __init__(self,
-                 dataloader_train,
-                 dataloader_val,
-                 network,
-                 learning_rate=0.05,
-                 offset=1,
-                 ridge_factor=5e-9,
-                 device=None):
+    def __init__(
+        self, dataloader_train, dataloader_val, network, learning_rate=0.05, offset=1, ridge_factor=5e-9, device=None
+    ):
         if torch.cuda.is_available() and device is None:
             self.device = "cuda"
         elif not torch.cuda.is_available() and device is None:
@@ -176,32 +171,35 @@ class ESNModel:
     def train(self, ridge=False):
         """Train model."""
         if ridge:
-            self.net.train()
-            cnt, sum_loss = 0, 0
-            for (x, y) in self.dataloader_train:
-                out, _ = self.net(x.to(self.device), return_states=True)
-                ytmp = torch.transpose(y.view(-1, self.net.input_size).to(self.device), 0, 1)
-                outtmp = torch.transpose(out.view(-1, out.shape[-1]), 0, 1).to(self.device)
-                ridge = torch.matmul(
-                    torch.matmul(ytmp, torch.transpose(outtmp, 0, 1)),
-                    torch.inverse(
-                        torch.matmul(outtmp, torch.transpose(outtmp, 0, 1))
-                        + torch.tensor(self.ridge_factor).to(self.device) * torch.eye(outtmp.shape[0], outtmp.shape[0]).to("cpu")
-                    ),
-                )
-                self.net.readout.fc_layers[0].weight = torch.nn.Parameter(ridge.to(self.device))
-                self.net.readout.fc_layers[0].bias = torch.nn.Parameter(
-                    torch.zeros_like(self.net.readout.fc_layers[0].bias).to(self.device))
-                loss = self.criterion(self.net.readout(out), y.to(self.device))
-                sum_loss += loss.detach().cpu().numpy()
-                cnt += 1
+            x, y = torch.tensor(self.dataloader_train.dataset.input_data, dtype=torch.float64),\
+                torch.tensor(self.dataloader_train.dataset.output_data, dtype=torch.float64)
+            out, _ = self.net(x.to(self.device), return_states=True)
+            # x = x[:, self.offset:]
+            # y = y[:, self.offset:]
+            # out = out[:, self.offset:]
+            ytmp = torch.transpose(y.view(-1, self.net.input_size).to(self.device), 0, 1)
+            outtmp = torch.transpose(out.view(-1, out.shape[-1]), 0, 1).to(self.device)
+            ridge = torch.matmul(
+                torch.matmul(ytmp, torch.transpose(outtmp, 0, 1)),
+                torch.inverse(
+                    torch.matmul(outtmp, torch.transpose(outtmp, 0, 1))
+                    + torch.tensor(self.ridge_factor).to(self.device)
+                    * torch.eye(outtmp.shape[0], outtmp.shape[0]).to("cpu")
+                ),
+            )
+            self.net.readout.fc_layers[0].weight = torch.nn.Parameter(ridge.to(self.device))
+            self.net.readout.fc_layers[0].bias = torch.nn.Parameter(
+                torch.zeros_like(self.net.readout.fc_layers[0].bias).to(self.device)
+            )
+            sum_loss = self.criterion(self.net.readout(out), y.to(self.device)).detach().cpu().numpy()
+            cnt = 1
         else:
             self.net.train()
             cnt, sum_loss = 0, 0
             for (x, y) in self.dataloader_train:
                 self.optimizer.zero_grad()
                 out, _ = self.net(x.to(self.device))
-                loss = self.criterion(out[:, self.offset:], y[:, self.offset:].to(self.device))
+                loss = self.criterion(out[:, self.offset :], y[:, self.offset :].to(self.device))
                 loss.backward()
                 self.optimizer.step()
                 sum_loss += loss.detach().cpu().numpy()
@@ -218,7 +216,7 @@ class ESNModel:
         with torch.no_grad():
             for (x, y) in self.dataloader_val:
                 out, _ = self.net(x.to(self.device))
-                loss = self.criterion(out[:, self.offset:], y[:, self.offset:].to(self.device))
+                loss = self.criterion(out[:, self.offset :], y[:, self.offset :].to(self.device))
                 sum_loss += loss.detach().cpu().numpy()
                 cnt += 1
         self.val_loss.append(sum_loss / cnt)
