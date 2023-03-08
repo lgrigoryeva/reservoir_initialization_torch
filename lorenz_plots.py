@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import torch
 
-from brusselator.config import config
-from brusselator.datasets import BrusselatorParallelDataset
-from dmaps_utils import create_geometric_harmonics, nystrom
+from lorenz.config import config
+from lorenz.datasets import LorenzParallelDataset
+from dmaps_utils import create_geometric_harmonics_lorenz, nystrom
 from plot_utils import load_model
 
 torch.set_default_dtype(config["TRAINING"]["dtype"])
@@ -13,13 +13,13 @@ CMAP = "plasma"
 
 
 # Load data
-dataset_train = BrusselatorParallelDataset(
+dataset_train = LorenzParallelDataset(
     config["DATA"]["n_train"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"]
 )
-dataset_val = BrusselatorParallelDataset(
+dataset_val = LorenzParallelDataset(
     config["DATA"]["n_val"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"]
 )
-dataset_test = BrusselatorParallelDataset(
+dataset_test = LorenzParallelDataset(
     config["DATA"]["n_test"], config["DATA"]["l_trajectories_test"], config["DATA"]["parameters"]
 )
 
@@ -27,7 +27,7 @@ dataset_test = BrusselatorParallelDataset(
 model = load_model(dataset_train, dataset_val, config)
 
 # Create geometric harmonics
-V, D, eps, x_chunks_train, c_chunks_train, interp_c = create_geometric_harmonics(
+V, D, eps, x_chunks_train, c_chunks_train, interp_c = create_geometric_harmonics_lorenz(
     dataset_train, dataset_test, config, model
 )
 
@@ -192,6 +192,6 @@ ax2.text(-0.23, 1.0, "b", transform=ax2.transAxes, size=12, weight="bold")
 ax3.text(-0.1, 1.1, "c", transform=ax3.transAxes, size=12, weight="bold")
 ax4.text(-0.1, 1.1, "d", transform=ax4.transAxes, size=12, weight="bold")
 ax5.text(-0.1, 1.1, "e", transform=ax5.transAxes, size=12, weight="bold")
-plt.savefig("fig/figure_brusselator.pdf")
-plt.savefig("fig/figure_brusselator.png", dpi=400)
+plt.savefig("fig/figure_lorenz.pdf")
+plt.savefig("fig/figure_lorenz.png", dpi=400)
 plt.show()

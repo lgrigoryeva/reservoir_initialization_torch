@@ -41,5 +41,3 @@ def load_model(dataset_train, dataset_val, config):
     )
     model.load_network(config["PATH"] + "model_")
     return model
-
-

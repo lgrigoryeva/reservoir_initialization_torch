@@ -64,8 +64,7 @@ class LorenzDataset:
 
 
 def create_trajectory(inputs):
-    time_array, parameters = inputs
-    initial_condition = create_initial_condition()
+    time_array, parameters, initial_condition = inputs
     trajectory = lorenz.integrate(initial_condition, time_array, parameters)
     return trajectory[:-1, :1], trajectory[1:, :1], trajectory[:-1, 1:]
 
@@ -81,7 +80,7 @@ class LorenzParallelDataset:
 
         with Pool(processes=4) as p:
             self.input_data, self.output_data, self.v_data = list(
-                zip(*p.map(create_trajectory, [[time_array, parameters] for _ in range(num_trajectories)]))
+                zip(*p.map(create_trajectory, [[time_array, parameters, create_initial_condition()] for _ in range(num_trajectories)]))
             )
 
         self.input_data = np.array(self.input_data)

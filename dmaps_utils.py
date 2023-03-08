@@ -1,9 +1,9 @@
-import torch
-from dm import diffusion_maps, geometric_harmonics
-
 import numpy as np
+import torch
 from scipy.spatial.distance import cdist, pdist
 from sklearn.model_selection import train_test_split
+
+from dm import diffusion_maps, geometric_harmonics
 
 
 def get_hidden_states(dataset, model):
@@ -40,7 +40,6 @@ def create_chunks(data, max_n_transients, length_chunks, shift_betw_chunks):
     return chunks
 
 
-
 def dmaps(data, eps=None, return_eps=False):
     """Do diffusion maps on data."""
     pw_dists = pdist(data, "euclidean")
@@ -60,7 +59,6 @@ def dmaps(data, eps=None, return_eps=False):
     if return_eps:
         return D, V, eps
     return D, V
-
 
 
 def create_geometric_harmonics(dataset_train, dataset_test, config, model):
@@ -106,6 +104,71 @@ def create_geometric_harmonics(dataset_train, dataset_test, config, model):
     V = V[:, [1, 3]]
     D = D[[1, 3]]
 
+    print("Creating geometric harmonics.")
+    V_train, V_test, c_chunks_train_train, c_chunks_train_test = train_test_split(
+        V, c_chunks_train, random_state=np.random.seed(10), train_size=8 / 10
+    )
+
+    pw = pdist(V_train, "euclidean")
+    eps_GH = np.median(pw**2) * 0.05
+
+    GH = diffusion_maps.SparseDiffusionMaps(
+        points=V_train,
+        epsilon=eps_GH,
+        num_eigenpairs=config["GH"]["gh_num_eigenpairs"],
+        cut_off=np.inf,
+        renormalization=0,
+        normalize_kernel=False,
+    )
+    print("Interpolation function.")
+    interp_c = geometric_harmonics.GeometricHarmonicsInterpolator(
+        points=V_train, epsilon=None, values=c_chunks_train_train, diffusion_maps=GH
+    )
+    return V, D, eps, x_chunks_train, c_chunks_train, interp_c
+
+
+def create_geometric_harmonics_lorenz(dataset_train, dataset_test, config, model):
+    c_train = get_hidden_states(dataset_train, model)
+    c_test = get_hidden_states(dataset_test, model)
+
+    x_data_train = dataset_train.input_data[:, config["GH"]["initial_set_off"] :]
+    c_data_train = c_train[:, config["GH"]["initial_set_off"] :]
+
+    x_data_test = dataset_test.input_data[:, config["GH"]["initial_set_off"] :]
+    c_data_test = c_test[:, config["GH"]["initial_set_off"] :]
+
+    x_chunks_train = create_chunks(
+        x_data_train,
+        config["GH"]["max_n_transients"],
+        config["GH"]["gh_lenght_chunks"],
+        config["GH"]["shift_betw_chunks"],
+    )
+    c_chunks_train = create_chunks(
+        c_data_train,
+        config["GH"]["max_n_transients"],
+        config["GH"]["gh_lenght_chunks"],
+        config["GH"]["shift_betw_chunks"],
+    )
+    c_chunks_train = c_chunks_train[:, 0, :]
+
+    x_chunks_test = create_chunks(
+        x_data_test,
+        config["GH"]["max_n_transients"],
+        config["GH"]["gh_lenght_chunks"],
+        int(5 * config["GH"]["shift_betw_chunks"]),
+    )
+    c_chunks_test = create_chunks(
+        c_data_test,
+        config["GH"]["max_n_transients"],
+        config["GH"]["gh_lenght_chunks"],
+        int(5 * config["GH"]["shift_betw_chunks"]),
+    )
+    c_chunks_test = c_chunks_test[:, 0, :]
+
+    # Diffusion maps on input data
+    D, V, eps = dmaps(x_chunks_train, return_eps=True)
+    V = V[:, [1, 4, 8]]
+    D = D[[1, 4, 8]]
 
     print("Creating geometric harmonics.")
     V_train, V_test, c_chunks_train_train, c_chunks_train_test = train_test_split(
