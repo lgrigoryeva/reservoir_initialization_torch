@@ -2,12 +2,9 @@ import torch
 
 config = {}
 config["DATA"] = {}
-# config["DATA"]["n_train"] = 400
-# config["DATA"]["n_val"] = 50
-# config["DATA"]["n_test"] = 50
 config["DATA"]["n_train"] = 600
-config["DATA"]["n_val"] = 4
-config["DATA"]["n_test"] = 4
+config["DATA"]["n_val"] = 8
+config["DATA"]["n_test"] = 8
 config["DATA"]["l_trajectories"] = 150
 config["DATA"]["l_trajectories_test"] = 200
 config["DATA"]["parameters"] = {}
@@ -26,6 +23,13 @@ config["TRAINING"]["gh_num_eigenpairs"] = 100
 config["TRAINING"]["offset"] = 1
 config["TRAINING"]["device"] = "cpu"
 
+config["GH"] = {}
+config["GH"]["initial_set_off"] = 20
+config["GH"]["gh_lenght_chunks"] = 5
+config["GH"]["lenght_chunks"] = 10
+config["GH"]["max_n_transients"] = 200
+config["GH"]["shift_betw_chunks"] = 4
+config["GH"]["gh_num_eigenpairs"] = 100
 
 config["MODEL"] = {}
 # Number of variables to use when using the lorenz system

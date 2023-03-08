@@ -1,9 +1,8 @@
 import numpy as np
 import torch
+from sklearn.linear_model import Ridge
 from torch import nn
 from tqdm.auto import tqdm
-
-from sklearn.linear_model import Ridge
 
 
 class DenseStack(nn.Module):
@@ -173,18 +172,20 @@ class ESNModel:
     def train(self, ridge=False):
         """Train model."""
         if ridge:
-            x, y = torch.tensor(self.dataloader_train.dataset.input_data, dtype=torch.float64),\
-                torch.tensor(self.dataloader_train.dataset.output_data, dtype=torch.float64)
+            x, y = torch.tensor(self.dataloader_train.dataset.input_data, dtype=torch.float64), torch.tensor(
+                self.dataloader_train.dataset.output_data, dtype=torch.float64
+            )
             out, _ = self.net(x.to(self.device), return_states=True)
-            out = out[:, self.offset:]
-            y = y[:, self.offset:]
+            out = out[:, self.offset :]
+            y = y[:, self.offset :]
             out_np = out.reshape(-1, out.shape[-1]).detach().cpu().numpy()
             y_np = y.reshape(-1, self.net.input_size).detach().cpu().numpy()
 
             clf = Ridge(alpha=self.ridge_factor)
             clf.fit(out_np, y_np)
             self.net.readout.fc_layers[0].weight = torch.nn.Parameter(
-                torch.tensor(clf.coef_, dtype=torch.float64).to(self.device))
+                torch.tensor(clf.coef_, dtype=torch.float64).to(self.device)
+            )
             self.net.readout.fc_layers[0].bias = torch.nn.Parameter(
                 torch.zeros_like(self.net.readout.fc_layers[0].bias).to(self.device)
             )

@@ -1,12 +1,12 @@
 """Run Brusselator example."""
 import os
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import optuna
 import torch
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
-import optuna
 
 from brusselator.config import config
 from brusselator.datasets import BrusselatorParallelDataset
@@ -53,12 +53,13 @@ dataloader_val = DataLoader(
     pin_memory=True,
 )
 
+
 def objective(trial):
     leaking_rate = trial.suggest_float("leaking_rate", 0.3, 0.7)
     # reservoir_size = trial.suggest_int("reservoir_size", 10, 10, step=1)
     # reservoir_size = 2**reservoir_size
     reservoir_size = config["MODEL"]["reservoir_size"]
-    ridge_factor = trial.suggest_int('ridge_factor', -3, 3, step=1)
+    ridge_factor = trial.suggest_int("ridge_factor", -3, 3, step=1)
     ridge_factor = 10**ridge_factor
     scale_rec = trial.suggest_float("scale_rec", 0.8, 1.0)
     scale_in = trial.suggest_float("scale_in", 0.0, 0.2)
@@ -69,7 +70,7 @@ def objective(trial):
         config["MODEL"]["input_size"],
         scale_rec=scale_rec,
         scale_in=scale_in,
-        leaking_rate=leaking_rate
+        leaking_rate=leaking_rate,
     )
 
     model = ESNModel(
@@ -79,7 +80,7 @@ def objective(trial):
         learning_rate=config["TRAINING"]["learning_rate"],
         offset=config["TRAINING"]["offset"],
         ridge_factor=ridge_factor,
-        device=config["TRAINING"]["device"]
+        device=config["TRAINING"]["device"],
     )
 
     loss = model.train(ridge=config["TRAINING"]["ridge"])
@@ -88,12 +89,10 @@ def objective(trial):
         torch.tensor(dataset_test.input_data[0][:warmup], dtype=torch.get_default_dtype()).to(model.device),
         T=dataset_test.input_data[0].shape[0] - warmup - 1,
     )
-    return np.mean((predictions[model.offset:]-dataset_test.input_data[0][model.offset:, 0])**2)
+    return np.mean((predictions[model.offset :] - dataset_test.input_data[0][model.offset :, 0]) ** 2)
 
-study = optuna.create_study(
-    storage="sqlite:///db.sqlite3",  # Specify the storage URL here.
-    study_name="brusselator"
-)
+
+study = optuna.create_study(storage="sqlite:///db.sqlite3", study_name="brusselator")  # Specify the storage URL here.
 
 study.optimize(objective, n_trials=300)
 

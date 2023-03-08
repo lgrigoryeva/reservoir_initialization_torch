@@ -54,8 +54,7 @@ class BrusselatorDataset:
 
 
 def create_trajectory(inputs):
-    time_array, parameters = inputs
-    initial_condition = brusselator.create_initial_condition()
+    time_array, parameters, initial_condition = inputs
     trajectory = brusselator.integrate(initial_condition, time_array, parameters)
     return trajectory[:-1, :1], trajectory[1:, :1], trajectory[:-1, 1:]
 
@@ -70,7 +69,11 @@ class BrusselatorParallelDataset:
 
         with Pool(processes=4) as p:
             self.input_data, self.output_data, self.v_data = list(
-                zip(*p.map(create_trajectory, [[time_array, parameters] for _ in range(num_trajectories)]))
+                zip(*p.map(create_trajectory,
+                           [[time_array,
+                             parameters,
+                             brusselator.create_initial_condition()] for _ in range(
+                                 num_trajectories)]))
             )
 
         self.input_data = np.array(self.input_data)
