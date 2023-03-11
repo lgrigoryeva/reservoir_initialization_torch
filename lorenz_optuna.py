@@ -46,7 +46,6 @@ plt.savefig(config["PATH"] + "test_data.pdf")
 plt.close()
 
 
-
 # Create PyTorch dataloaders for train and validation data
 dataloader_train = DataLoader(
     dataset_train,

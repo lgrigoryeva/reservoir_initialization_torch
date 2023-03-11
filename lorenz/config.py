@@ -44,8 +44,7 @@ config["TRAINING"]["ridge_factor"] = 1e-2
 
 # Train loss: 0.000068
 # Val loss: 0.000051
-config["MODEL"]['leaking_rate'] = 0.5012724887553683
-config["TRAINING"]['ridge_factor'] = 1e-3
-config["MODEL"]['scale_rec'] = 0.8048300803863692
-config["MODEL"]['scale_in'] = 0.17928881689644652
-
+config["MODEL"]["leaking_rate"] = 0.5012724887553683
+config["TRAINING"]["ridge_factor"] = 1e-3
+config["MODEL"]["scale_rec"] = 0.8048300803863692
+config["MODEL"]["scale_in"] = 0.17928881689644652

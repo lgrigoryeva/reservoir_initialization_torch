@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import torch
 
+from dmaps_utils import create_geometric_harmonics_lorenz, nystrom
 from lorenz.config import config
 from lorenz.datasets import LorenzParallelDataset
-from dmaps_utils import create_geometric_harmonics_lorenz, nystrom
 from plot_utils import load_model
 
 torch.set_default_dtype(config["TRAINING"]["dtype"])

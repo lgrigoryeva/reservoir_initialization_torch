@@ -80,7 +80,12 @@ class LorenzParallelDataset:
 
         with Pool(processes=4) as p:
             self.input_data, self.output_data, self.v_data = list(
-                zip(*p.map(create_trajectory, [[time_array, parameters, create_initial_condition()] for _ in range(num_trajectories)]))
+                zip(
+                    *p.map(
+                        create_trajectory,
+                        [[time_array, parameters, create_initial_condition()] for _ in range(num_trajectories)],
+                    )
+                )
             )
 
         self.input_data = np.array(self.input_data)
