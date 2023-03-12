@@ -22,15 +22,15 @@ config["TRAINING"]["learning_rate"] = 5e-3
 config["TRAINING"]["ridge"] = True
 config["TRAINING"]["dtype"] = torch.float64
 config["TRAINING"]["gh_num_eigenpairs"] = 100
-config["TRAINING"]["offset"] = 1
+config["TRAINING"]["offset"] = 20
 config["TRAINING"]["device"] = "cpu"
 
 config["GH"] = {}
 config["GH"]["initial_set_off"] = 20
 config["GH"]["gh_lenght_chunks"] = 7
 config["GH"]["lenght_chunks"] = 10
-config["GH"]["max_n_transients"] = 600
-config["GH"]["shift_betw_chunks"] = 1
+config["GH"]["max_n_transients"] = 200
+config["GH"]["shift_betw_chunks"] = 3
 config["GH"]["gh_num_eigenpairs"] = 100
 
 config["MODEL"] = {}

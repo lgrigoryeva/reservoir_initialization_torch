@@ -24,15 +24,14 @@ dataset_train = LorenzParallelDataset(
     config["DATA"]["n_train"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"], True
 )
 dataset_val = LorenzParallelDataset(
-    config["DATA"]["n_val"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"], True
+    config["DATA"]["n_val"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"], False
 )
 dataset_test = LorenzParallelDataset(
-    config["DATA"]["n_test"], config["DATA"]["l_trajectories_test"], config["DATA"]["parameters"], True
+    config["DATA"]["n_test"], config["DATA"]["l_trajectories_test"], config["DATA"]["parameters"], False
 )
 
 # Load model
 model = load_model(dataset_train, dataset_val, config)
-
 
 # Do geometric harmonics
 c_train = get_hidden_states(dataset_train, model)
@@ -73,7 +72,7 @@ c_chunks_test = create_chunks(
 c_chunks_test = c_chunks_test[:, 0, :]
 
 # Diffusion maps on input data
-D, V, eps = dmaps(x_chunks_train, return_eps=True)
+D, V, eps = dmaps(x_chunks_train, eps=10**3, return_eps=True)
 
 for i in range(2, 6):
     fig = plt.figure()
@@ -86,14 +85,14 @@ for i in range(2, 6):
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter(V[:, 1], V[:, 4], V[:, 5])
+ax.scatter(V[:, 1], V[:, 3], V[:, 5])
 ax.set_xlabel('')
 ax.set_ylabel('')
 # plt.savefig('')
 plt.show()
 
-V = V[:, [1, 4, 5]]
-D = D[[1, 4, 5]]
+V = V[:, [1, 3, 5]]
+D = D[[1, 3, 5]]
 
 print("Creating geometric harmonics.")
 V_train, V_test, c_chunks_train_train, c_chunks_train_test = train_test_split(
@@ -125,7 +124,7 @@ def plot_predictions():
     for i in range(1, 5):
         ax = fig.add_subplot(2, 2, i, aspect='equal')
         axs.append(ax)
-        ax.scatter(c_chunks_train_train[:, i-1], predictions_train[:, i-1], s=7)
+        ax.scatter(c_chunks_train_train[::10, i-1], predictions_train[::10, i-1], s=7)
         ax.plot(np.linspace(np.min(c_chunks_train_train[:, i-1]),
                             np.max(c_chunks_train_train[:, i-1]), 10),
                 np.linspace(np.min(c_chunks_train_train[:, i-1]),
@@ -312,7 +311,7 @@ ax5.plot(
     trajectory_w_warmup,
     "-x",
     markersize=3,
-    label="Autonomous with 5 steps warmup",
+    label="Autonomous with 7 steps warmup",
     color="blue",
 )
 ax5.plot(
@@ -334,7 +333,10 @@ ax5.plot(
 ax5.set_xlabel("$t$", labelpad=0)
 ax5.set_ylabel("$u$")
 ax5.axvline(x=dataset_test.tt[config["DATA"]["max_warmup"]], color="k")
-ax5.set_xlim((dataset_test.tt[0], dataset_test.tt[-1]))
+# ax5.set_xlim((dataset_test.tt[0], dataset_test.tt[-1]))
+ax5.set_ylim((-70, 30))
+ax5.set_xlim((20.5, 25))
+ax4.set_xlim((20.5, 25))
 plt.legend(fontsize=8)
 plt.subplots_adjust(bottom=0.08, left=0.09, top=0.97, right=0.97, hspace=0.35, wspace=0.3)
 ax1.text(-0.23, 1.0, "a", transform=ax1.transAxes, size=12, weight="bold")

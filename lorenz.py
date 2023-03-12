@@ -18,11 +18,12 @@ if not os.path.exists(config["PATH"]):
 dataset_train = LorenzParallelDataset(
     config["DATA"]["n_train"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"], config["DATA"]["load_data"]
 )
+dataset_train.save_data()
 dataset_val = LorenzParallelDataset(
-    config["DATA"]["n_val"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"], config["DATA"]["load_data"]
+    config["DATA"]["n_val"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"], False
 )
 dataset_test = LorenzParallelDataset(
-    config["DATA"]["n_test"], config["DATA"]["l_trajectories_test"], config["DATA"]["parameters"], config["DATA"]["load_data"]
+    config["DATA"]["n_test"], config["DATA"]["l_trajectories_test"], config["DATA"]["parameters"], False
 )
 
 fig = plt.figure()

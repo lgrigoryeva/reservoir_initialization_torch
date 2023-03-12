@@ -111,10 +111,6 @@ class LorenzParallelDataset:
             self.output_data = np.array(self.output_data)
             self.v_data = np.array(self.v_data)
             self.tt = time_array
-            np.save('lorenz/time_array.npy', self.tt)
-            np.save('lorenz/input_data.npy', self.input_data)
-            np.save('lorenz/output_data.npy', self.output_data)
-            np.save('lorenz/v_data.npy', self.v_data)
 
     def __len__(self) -> int:
         """Return number of trajectories."""
@@ -126,13 +122,9 @@ class LorenzParallelDataset:
             self.output_data[self.ids[index]], dtype=config["TRAINING"]["dtype"]
         )
 
-    def save_data(self, path: str, filename: str) -> None:
+    def save_data(self) -> None:
         """Save the trajectories."""
-        np.savez(
-            path + filename,
-            input_data=self.input_data,
-            output_data=self.output_data,
-            v_data=self.v_data,
-            tt_arr=self.tt_arr,
-            ids=self.ids,
-        )
+        np.save('lorenz/time_array.npy', self.tt)
+        np.save('lorenz/input_data.npy', self.input_data)
+        np.save('lorenz/output_data.npy', self.output_data)
+        np.save('lorenz/v_data.npy', self.v_data)
