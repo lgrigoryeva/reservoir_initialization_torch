@@ -16,13 +16,13 @@ if not os.path.exists(config["PATH"]):
     os.makedirs(config["PATH"])
 
 dataset_train = LorenzParallelDataset(
-    config["DATA"]["n_train"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"]
+    config["DATA"]["n_train"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"], config["DATA"]["load_data"]
 )
 dataset_val = LorenzParallelDataset(
-    config["DATA"]["n_val"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"]
+    config["DATA"]["n_val"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"], config["DATA"]["load_data"]
 )
 dataset_test = LorenzParallelDataset(
-    config["DATA"]["n_test"], config["DATA"]["l_trajectories_test"], config["DATA"]["parameters"]
+    config["DATA"]["n_test"], config["DATA"]["l_trajectories_test"], config["DATA"]["parameters"], config["DATA"]["load_data"]
 )
 
 fig = plt.figure()

@@ -155,20 +155,22 @@ def create_geometric_harmonics_lorenz(dataset_train, dataset_test, config, model
         x_data_test,
         config["GH"]["max_n_transients"],
         config["GH"]["gh_lenght_chunks"],
-        int(5 * config["GH"]["shift_betw_chunks"]),
+        int(config["GH"]["shift_betw_chunks"]),
     )
     c_chunks_test = create_chunks(
         c_data_test,
         config["GH"]["max_n_transients"],
         config["GH"]["gh_lenght_chunks"],
-        int(5 * config["GH"]["shift_betw_chunks"]),
+        int(config["GH"]["shift_betw_chunks"]),
     )
     c_chunks_test = c_chunks_test[:, 0, :]
 
     # Diffusion maps on input data
     D, V, eps = dmaps(x_chunks_train, return_eps=True)
-    V = V[:, [1, 4, 8]]
-    D = D[[1, 4, 8]]
+    # V = V[:, [1, 4, 8]]
+    # D = D[[1, 4, 8]]
+    V = V[:, 1:9]
+    D = D[1:9]
 
     print("Creating geometric harmonics.")
     V_train, V_test, c_chunks_train_train, c_chunks_train_test = train_test_split(

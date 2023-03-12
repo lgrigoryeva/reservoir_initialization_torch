@@ -1,7 +1,14 @@
+import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import axes3d
 import torch
 
-from dmaps_utils import create_geometric_harmonics_lorenz, nystrom
+from sklearn.model_selection import train_test_split
+from scipy.spatial.distance import cdist, pdist
+
+from dm import diffusion_maps, geometric_harmonics
+
+from dmaps_utils import create_geometric_harmonics_lorenz, nystrom, get_hidden_states, create_chunks, dmaps
 from lorenz.config import config
 from lorenz.datasets import LorenzParallelDataset
 from plot_utils import load_model
@@ -14,22 +21,165 @@ CMAP = "plasma"
 
 # Load data
 dataset_train = LorenzParallelDataset(
-    config["DATA"]["n_train"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"]
+    config["DATA"]["n_train"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"], True
 )
 dataset_val = LorenzParallelDataset(
-    config["DATA"]["n_val"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"]
+    config["DATA"]["n_val"], config["DATA"]["l_trajectories"], config["DATA"]["parameters"], True
 )
 dataset_test = LorenzParallelDataset(
-    config["DATA"]["n_test"], config["DATA"]["l_trajectories_test"], config["DATA"]["parameters"]
+    config["DATA"]["n_test"], config["DATA"]["l_trajectories_test"], config["DATA"]["parameters"], True
 )
 
 # Load model
 model = load_model(dataset_train, dataset_val, config)
 
-# Create geometric harmonics
-V, D, eps, x_chunks_train, c_chunks_train, interp_c = create_geometric_harmonics_lorenz(
-    dataset_train, dataset_test, config, model
+
+# Do geometric harmonics
+c_train = get_hidden_states(dataset_train, model)
+c_test = get_hidden_states(dataset_test, model)
+
+x_data_train = dataset_train.input_data[:, config["GH"]["initial_set_off"] :]
+c_data_train = c_train[:, config["GH"]["initial_set_off"] :]
+
+x_data_test = dataset_test.input_data[:, config["GH"]["initial_set_off"] :]
+c_data_test = c_test[:, config["GH"]["initial_set_off"] :]
+
+x_chunks_train = create_chunks(
+    x_data_train,
+    config["GH"]["max_n_transients"],
+    config["GH"]["gh_lenght_chunks"],
+    config["GH"]["shift_betw_chunks"],
 )
+c_chunks_train = create_chunks(
+    c_data_train,
+    config["GH"]["max_n_transients"],
+    config["GH"]["gh_lenght_chunks"],
+    config["GH"]["shift_betw_chunks"],
+)
+c_chunks_train = c_chunks_train[:, 0, :]
+
+x_chunks_test = create_chunks(
+    x_data_test,
+    config["GH"]["max_n_transients"],
+    config["GH"]["gh_lenght_chunks"],
+    int(config["GH"]["shift_betw_chunks"]),
+)
+c_chunks_test = create_chunks(
+    c_data_test,
+    config["GH"]["max_n_transients"],
+    config["GH"]["gh_lenght_chunks"],
+    int(config["GH"]["shift_betw_chunks"]),
+)
+c_chunks_test = c_chunks_test[:, 0, :]
+
+# Diffusion maps on input data
+D, V, eps = dmaps(x_chunks_train, return_eps=True)
+
+for i in range(2, 6):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.scatter(V[:, 1], V[:, i])
+    ax.set_xlabel('')
+    ax.set_ylabel('')
+    # plt.savefig('')
+    plt.show()
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(V[:, 1], V[:, 4], V[:, 5])
+ax.set_xlabel('')
+ax.set_ylabel('')
+# plt.savefig('')
+plt.show()
+
+V = V[:, [1, 4, 5]]
+D = D[[1, 4, 5]]
+
+print("Creating geometric harmonics.")
+V_train, V_test, c_chunks_train_train, c_chunks_train_test = train_test_split(
+    V, c_chunks_train, random_state=np.random.seed(10), train_size=8 / 10
+)
+
+pw = pdist(V_train, "euclidean")
+eps_GH = np.median(pw**2) * 0.05
+
+config["GH"]["gh_num_eigenpairs"] = 200
+GH = diffusion_maps.SparseDiffusionMaps(
+    points=V_train,
+    epsilon=eps_GH,
+    num_eigenpairs=config["GH"]["gh_num_eigenpairs"],
+    cut_off=np.inf,
+    renormalization=0,
+    normalize_kernel=False,
+)
+print("Interpolation function.")
+interp_c = geometric_harmonics.GeometricHarmonicsInterpolator(
+    points=V_train, epsilon=None, values=c_chunks_train_train, diffusion_maps=GH
+)
+
+def plot_predictions():
+    predictions_train = interp_c(V_train)
+
+    fig = plt.figure(figsize=(10, 10))
+    axs = []
+    for i in range(1, 5):
+        ax = fig.add_subplot(2, 2, i, aspect='equal')
+        axs.append(ax)
+        ax.scatter(c_chunks_train_train[:, i-1], predictions_train[:, i-1], s=7)
+        ax.plot(np.linspace(np.min(c_chunks_train_train[:, i-1]),
+                            np.max(c_chunks_train_train[:, i-1]), 10),
+                np.linspace(np.min(c_chunks_train_train[:, i-1]),
+                            np.max(c_chunks_train_train[:, i-1]), 10), 'k')
+    axs[0].set_xlabel('True $h^{(1)}$')
+    axs[0].set_ylabel('Predicted $h^{(1)}$')
+    axs[1].set_xlabel('True $h^{(2)}$')
+    axs[1].set_ylabel('Predicted $h^{(2)}$')
+    axs[2].set_xlabel('True $h^{(3)}$')
+    axs[2].set_ylabel('Predicted $h^{(3)}$')
+    axs[3].set_xlabel('True $h^{(4)}$')
+    axs[3].set_ylabel('Predicted $h^{(4)}$')
+    plt.tight_layout()
+    plt.savefig(config["PATH"]+'geometric_harmonics_h_' +
+                str(config["GH"]["gh_lenght_chunks"])+'.png', dpi=300)
+    plt.savefig(config["PATH"]+'geometric_harmonics_h_' +
+                str(config["GH"]["gh_lenght_chunks"])+'.pdf')
+    plt.show()
+
+    predictions_test = interp_c(V_test)
+
+    fig = plt.figure(figsize=(10, 10))
+    axs = []
+    for i in range(1, 5):
+        ax = fig.add_subplot(2, 2, i, aspect='equal')
+        axs.append(ax)
+        ax.scatter(c_chunks_train_test[:, i-1], predictions_test[:, i-1], s=7)
+        ax.plot(np.linspace(np.min(c_chunks_train_test[:, i-1]),
+                            np.max(c_chunks_train_test[:, i-1]), 10),
+                np.linspace(np.min(c_chunks_train_test[:, i-1]),
+                            np.max(c_chunks_train_test[:, i-1]), 10), 'k')
+    axs[0].set_xlabel('True $h^{(1)}$')
+    axs[0].set_ylabel('Predicted $h^{(1)}$')
+    axs[1].set_xlabel('True $h^{(2)}$')
+    axs[1].set_ylabel('Predicted $h^{(2)}$')
+    axs[2].set_xlabel('True $h^{(3)}$')
+    axs[2].set_ylabel('Predicted $h^{(3)}$')
+    axs[3].set_xlabel('True $h^{(4)}$')
+    axs[3].set_ylabel('Predicted $h^{(4)}$')
+    plt.tight_layout()
+    plt.savefig(config["PATH"]+'geometric_harmonics_test_h_' +
+                str(config["GH"]["gh_lenght_chunks"])+'.png', dpi=300)
+    plt.savefig(config["PATH"]+'geometric_harmonics_test_h_' +
+                str(config["GH"]["gh_lenght_chunks"])+'.pdf')
+    plt.show()
+
+plot_predictions()
+
+
+
+# # Create geometric harmonics
+# V, D, eps, x_chunks_train, c_chunks_train, interp_c = create_geometric_harmonics_lorenz(
+#     dataset_train, dataset_test, config, model
+# )
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
@@ -114,7 +264,7 @@ ax.set_ylabel("")
 # plt.savefig('')
 plt.show()
 
-t_series = [0, 4, 6]
+t_series = [0, 1, 2]
 cm_to_inch = 0.39370079
 fig = plt.figure(figsize=(15.8 * cm_to_inch, 15.8 * cm_to_inch))
 ax1 = plt.subplot2grid((4, 2), (0, 0), colspan=1)

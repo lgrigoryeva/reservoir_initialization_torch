@@ -19,7 +19,6 @@ config["TRAINING"]["batch_size"] = 256
 config["TRAINING"]["learning_rate"] = 5e-3
 config["TRAINING"]["ridge"] = True
 config["TRAINING"]["dtype"] = torch.float64
-config["TRAINING"]["gh_num_eigenpairs"] = 100
 config["TRAINING"]["offset"] = 1
 config["TRAINING"]["device"] = "cpu"
 
