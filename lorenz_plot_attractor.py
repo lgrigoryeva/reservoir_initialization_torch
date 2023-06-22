@@ -2,7 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
 import torch
+import torch.multiprocessing as mp
 
+mp.set_start_method('fork', force=True)
 from pydszoo import lorenz  # pylint: disable=E0401
 
 from sklearn.model_selection import train_test_split
