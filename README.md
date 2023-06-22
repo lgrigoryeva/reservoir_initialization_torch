@@ -5,7 +5,7 @@ INSTALLATION
 
 From Github
 
-    git clone https://github.com/fkemeth/reservoir_initialization_torch.git
+    git clone https://github.com/lgrigoryeva/reservoir_initialization_torch.git
     cd reservoir_initialization_torch
     pip install -r requirements.txt
 
