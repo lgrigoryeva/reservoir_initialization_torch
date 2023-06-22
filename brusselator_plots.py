@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import torch
+import torch.multiprocessing as mp
 
+mp.set_start_method('fork', force=True)
 from brusselator.config import config
 from brusselator.datasets import BrusselatorParallelDataset
 from dmaps_utils import create_geometric_harmonics, nystrom
