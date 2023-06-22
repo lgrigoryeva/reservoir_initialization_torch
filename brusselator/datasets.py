@@ -2,6 +2,9 @@ from multiprocessing import Pool
 
 import numpy as np
 import torch
+import torch.multiprocessing as mp
+
+mp.set_start_method('fork', force=True)
 from pydszoo import brusselator  # pylint: disable=E0401
 from tqdm.auto import tqdm
 
