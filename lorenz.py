@@ -3,6 +3,9 @@ import os
 
 import matplotlib.pyplot as plt
 import torch
+import torch.multiprocessing as mp
+
+mp.set_start_method('fork', force=True)
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
