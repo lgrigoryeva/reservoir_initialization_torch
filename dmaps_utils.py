@@ -1,5 +1,8 @@
 import numpy as np
 import torch
+import torch.multiprocessing as mp
+
+mp.set_start_method('fork', force=True)
 from scipy.spatial.distance import cdist, pdist
 from sklearn.model_selection import train_test_split
 
