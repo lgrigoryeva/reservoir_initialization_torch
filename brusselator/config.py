@@ -1,5 +1,7 @@
 import torch
+import torch.multiprocessing as mp
 
+mp.set_start_method('fork', force=True)
 config = {}
 config["DATA"] = {}
 config["DATA"]["n_train"] = 600
