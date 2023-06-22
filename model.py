@@ -1,5 +1,8 @@
 import numpy as np
 import torch
+import torch.multiprocessing as mp
+
+mp.set_start_method('fork', force=True)
 from sklearn.linear_model import Ridge
 from torch import nn
 from tqdm.auto import tqdm
